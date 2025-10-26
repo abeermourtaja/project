@@ -6,7 +6,7 @@ import Lectures from "./pages/lectures/Lectures";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import RootLayout from "./Layout/RootLayout";
-import Notifications from "./pages/Notifications";
+import Settings from "./pages/settings";
 
 function App() {
   return (
@@ -15,12 +15,12 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        <Route path="/notications" element={<Notifications />} />
         {/* الصفحات الداخلية تحت RootLayout */}
         <Route element={<RootLayout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/assignments" element={<Assignments />} />
           <Route path="/lectures" element={<Lectures />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

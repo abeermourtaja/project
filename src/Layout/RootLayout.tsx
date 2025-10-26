@@ -5,8 +5,16 @@ import Logo from "../components/logo";
 import { COLORS } from "../constants/colors";
 import profile from "../assets/profile.png";
 import {HomeOutlined,FileTextOutlined,SettingOutlined,PoweroffOutlined,YoutubeOutlined} from "@ant-design/icons";
+import { useState } from "react";
 function RootLayout() {
   const navigate = useNavigate();
+  const [logoutVisible, setLogoutVisible] = useState(false);
+
+  const handleLogout = () => {
+    // 👉 Do your logout logic here (e.g., clear token, redirect)
+    console.log("User logged out");
+    setLogoutVisible(false);
+  };
   return (
     <Layout>
       {/* --- Sider --- */}
@@ -38,6 +46,8 @@ function RootLayout() {
           style={{
             backgroundColor: COLORS.secondary,
             borderRight: "none",
+            fontFamily:"",
+            fontSize:"",
             fontWeight: "bold",
             marginTop: "0",
           }}
@@ -52,10 +62,10 @@ function RootLayout() {
           <Menu.Item key="assignments" icon={<FileTextOutlined />} onClick={() => navigate('/assignments')}>
             Assignments
           </Menu.Item>
-          <Menu.Item key="settings" icon={<SettingOutlined />}>
-            Setting
+          <Menu.Item key="settings" icon={<SettingOutlined />} onClick={() => navigate('/settings')}>
+            Settings
           </Menu.Item>
-          <Menu.Item key="signout" icon={<PoweroffOutlined />}>
+          <Menu.Item key="signout" icon={<PoweroffOutlined />} onClick={() => setLogoutVisible(true)}>
             Sign out
           </Menu.Item>
         </Menu>
@@ -63,7 +73,6 @@ function RootLayout() {
 
       {/* --- Main content --- */}
       <Outlet></Outlet>
-
     </Layout>
   );
 }

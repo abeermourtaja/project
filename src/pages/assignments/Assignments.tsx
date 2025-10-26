@@ -5,6 +5,7 @@ import { Content } from "antd/es/layout/layout";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import UploadAssignmentModal from "./UploadAssignmentModal";
+import NotificationsDrawer from "../Notifications";
 
 const { Title, Text } = Typography;
 
@@ -12,6 +13,7 @@ function Assignments() {
   const navigate = useNavigate();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [open, setOpen] = useState(false);
 
   // ✅ Static Assignments Data
   const assignments = [
@@ -75,7 +77,7 @@ function Assignments() {
         marginLeft: 220,
         padding: "30px",
         width: "100%",
-        paddingTop: "250px",
+        paddingTop: "200px",
       }}
     >
       <Content style={{ width: "100%" }}>
@@ -97,13 +99,13 @@ function Assignments() {
           <Row
             align="middle"
             justify="space-between"
-            style={{ marginBottom: 25, width: "800px" }}
+            style={{ marginBottom: 25, width: "1000px" }}
           >
             <Input
               prefix={<SearchOutlined />}
               placeholder="Search for your Assignments"
               style={{
-                width: "70%",
+                width: "78%",
                 height: 40,
                 backgroundColor: "#EDEDED",
                 borderRadius: 10,
@@ -137,12 +139,20 @@ function Assignments() {
                 }}
               >
                 <Badge count={1} size="small" style={{ backgroundColor: "#9AB7D0" }}>
-                  <BellFilled
-                    style={{ fontSize: 18, color: "#000" }}
-                    onClick={() => {
-                      navigate("/notifications");
-                    }}
-                  />
+                  <>
+                    <BellFilled
+                      style={{
+                        fontSize: 22,
+                        color: "#000",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setOpen(true)} // ✅ FIXED
+                    />
+                    <NotificationsDrawer
+                      open={open}
+                      onClose={() => setOpen(false)}
+                    />
+                  </>
                 </Badge>
               </div>
             </Space>

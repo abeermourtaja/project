@@ -5,11 +5,13 @@ import { Content } from "antd/es/layout/layout";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import DropdownMenu from "./DropdownMenu";
+import NotificationsDrawer from "../Notifications";
 const { Title, Text } = Typography;
 function Lectures() {
   const navigate=useNavigate()
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [open, setOpen] = useState(false);
 
   // ✅ Static Lecture Data
   const lectures = [
@@ -59,7 +61,7 @@ function Lectures() {
   };
 
   return (
-    <Layout  style={{ backgroundColor:COLORS.background,marginLeft: 220, padding: "30px" , width: "100%",paddingTop:"250px"}}>
+    <Layout  style={{ backgroundColor:COLORS.background,marginLeft: 220, padding: "30px" , width: "100%",paddingTop:"150px"}}>
       <Content style={{ width: "100%" }}>
         <div style={{ padding: "30px 50px" }}>
           {/* Page Title */}
@@ -76,12 +78,12 @@ function Lectures() {
           </Title>
 
           {/* Search and Add Button */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 25 ,width:"800px"}}>
+          <Row align="middle" justify="space-between" style={{ marginBottom: 25 ,width:"1000px"}}>
             <Input
               prefix={<SearchOutlined />}
               placeholder="Search for your lectures"
               style={{
-                width: "75%",
+                width: "80%",
                 height: 40,
                 backgroundColor: "#EDEDED",
                 borderRadius: 10,
@@ -115,7 +117,20 @@ function Lectures() {
                 }}
               >
                 <Badge count={1} size="small" style={{ backgroundColor: "#9AB7D0" }}>
-                  <BellFilled style={{ fontSize: 18, color: "#000" }} onClick={()=>{navigate("/notifications")}}/>
+                  <>
+                    <BellFilled
+                      style={{
+                        fontSize: 22,
+                        color: "#000",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setOpen(true)} // ✅ FIXED
+                    />
+                    <NotificationsDrawer
+                      open={open}
+                      onClose={() => setOpen(false)}
+                    />
+                </>
                 </Badge>
               </div>
             </Space>
@@ -147,7 +162,7 @@ function Lectures() {
                       borderBottomLeftRadius: 14,
                     }}
                   />
-                  <Col style={{marginRight:"300px"}}>
+                  <Col style={{marginRight:"480px"}}>
                     <Title level={5} style={{ margin: 0 ,fontWeight:"bold"}}>
                       {lecture.title}
                     </Title>
