@@ -59,7 +59,16 @@ function Login() {
   };
 
   return (
-    <div style={{ height: '100vh', width: '100vw', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        height: '100vh',
+        width: '100vw',
+        margin: 0,
+        padding: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Row gutter={0} style={{ flex: 1, width: '100%', margin: 0 }}>
         <Col
           xs={0}
@@ -95,8 +104,25 @@ function Login() {
             padding: '2rem',
           }}
         >
-          <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <h2 style={{ color: 'black', textAlign: 'start', marginBottom: '2rem', fontWeight: 700, fontFamily: 'Poppins', fontSize: '32' }}>
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 400,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}
+          >
+            <h2
+              style={{
+                color: 'black',
+                textAlign: 'start',
+                marginBottom: '2rem',
+                fontWeight: 700,
+                fontFamily: 'Poppins',
+                fontSize: '32',
+              }}
+            >
               Login
             </h2>
 
@@ -125,12 +151,24 @@ function Login() {
                   htmlType="submit"
                   block
                   loading={loading}
-                  style={{ fontWeight: 700, fontFamily: 'Roboto', fontSize: '16', backgroundColor: COLORS.primary }}
+                  style={{
+                    fontWeight: 700,
+                    fontFamily: 'Roboto',
+                    fontSize: '16',
+                    backgroundColor: COLORS.primary,
+                  }}
                 >
                   Log in
                 </Button>
                 <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-                  <a href="/forget-password" style={{ fontSize: '13px', textDecoration: 'underline', color: '#2E2E2E' }}>
+                  <a
+                    href="/forget-password"
+                    style={{
+                      fontSize: '13px',
+                      textDecoration: 'underline',
+                      color: '#2E2E2E',
+                    }}
+                  >
                     Forget password?
                   </a>
                 </div>
