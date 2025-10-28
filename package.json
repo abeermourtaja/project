@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@fontsource/poppins": "^5.2.7",
-    "antd": "^5.27.4",
+    "antd": "^5.27.6",
     "axios": "^1.12.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
