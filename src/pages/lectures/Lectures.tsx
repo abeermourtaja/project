@@ -1,70 +1,136 @@
-import { useState } from "react";
-import {Card,Row,Col,Input,Button,Typography,Space,Modal,Form,Badge, Layout, Upload} from "antd";
-import {SearchOutlined,EyeOutlined,FilePdfOutlined,BellFilled,PlusOutlined, VideoCameraAddOutlined, UploadOutlined} from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  Row,
+  Col,
+  Input,
+  Button,
+  Typography,
+  Space,
+  Modal,
+  Form,
+  Badge,
+  Layout,
+  message,
+  Spin,
+} from "antd";
+import {
+  SearchOutlined,
+  EyeOutlined,
+  FilePdfOutlined,
+  BellFilled,
+  PlusOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import { Content } from "antd/es/layout/layout";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import DropdownMenu from "./DropdownMenu";
 import NotificationsDrawer from "../Notifications";
+import { getLectures, addLecture } from "../../API/api"; // ✅ ربط مع الباك
+
 const { Title, Text } = Typography;
+
 function Lectures() {
-  const navigate=useNavigate()
+  const navigate = useNavigate();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
+  const [lectures, setLectures] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // ✅ Static Lecture Data
-  const lectures = [
-    {
-      id: 1,
-      title: "Lesson 1: Basics",
-      description: "Introduction to English grammar",
-      color: "#81B1E7",
-      date: "15 Jun 2025",
-      by: "Mr. Ahmed Omar",
-    },
-    {
-      id: 2,
-      title: "Lesson 2: Phrases",
-      description: "Common phrases and expressions",
-      color: "#A8D5BA",
-      date: "15 Jun 2025",
-      by: "Mr. Ahmed Omar",
-    },
-    {
-      id: 3,
-      title: "Lesson 3: Sentences",
-      description: "Building sentences & paragraphs",
-      color: "#E7C88E",
-      date: "15 Jun 2025",
-      by: "Mr. Ahmed Omar",
-    },
-    {
-      id: 4,
-      title: "Lesson 4: Advanced",
-      description: "Advanced grammar and vocabulary",
-      color: "#D7A9E3",
-      date: "15 Jun 2025",
-      by: "Mr. Ahmed Omar",
-    },
-  ];
+  // ✅ تحميل بيانات المستخدم والمحاضرات عند الدخول
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken"); // ✅ تصحيح اسم التوكن
+    if (!token) {
+      message.error("الرجاء تسجيل الدخول أولاً");
+      navigate("/login");
+      return;
+    }
 
-  // ✅ Open/Close Modal
+    // 🔹 جلب بيانات المستخدم من localStorage
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      setUserRole(user.role);
+    }
+
+    // 🔹 جلب المحاضرات
+    getLectures(token)
+      .then((data) => {
+        setLectures(data);
+      })
+      .catch(() => {
+        message.error("فشل في تحميل المحاضرات 😢");
+      })
+      .finally(() => setLoading(false));
+  }, [navigate]);
+
+  // ✅ فتح/إغلاق المودال
   const showModal = () => setIsModalVisible(true);
   const handleCancel = () => setIsModalVisible(false);
-  const handleOk = () => {
-    form.validateFields().then((values) => {
-      console.log("New Lecture:", values);
+
+  // ✅ رفع محاضرة جديدة (للمعلم فقط)
+  const handleOk = async () => {
+    const token = localStorage.getItem("accessToken"); // ✅ تصحيح اسم التوكن
+    if (!token) {
+      message.error("الرجاء تسجيل الدخول أولاً");
+      return;
+    }
+
+    if (userRole !== "teacher") {
+      message.warning("فقط المعلم يمكنه إضافة محاضرات!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const values = await form.validateFields();
+
+      const lectureData = {
+        title: values.title,
+        description: values.description,
+        video: values.video || "",
+      };
+
+      const newLecture = await addLecture(token, lectureData);
+      message.success("✅ تمت إضافة المحاضرة بنجاح!");
+
+      // ✅ أضف المحاضرة الجديدة بدون إعادة تحميل الكل
+      setLectures((prev) => [newLecture, ...prev]);
+
       form.resetFields();
       setIsModalVisible(false);
-    });
+    } catch (error: any) {
+      console.error("❌ Error adding lecture:", error);
+      message.error("حدث خطأ أثناء رفع المحاضرة.");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  if (loading) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "5rem" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
   return (
-    <Layout  style={{ backgroundColor:COLORS.background,marginLeft: 220, padding: "30px" , width: "100%",paddingTop:"150px"}}>
+    <Layout
+      style={{
+        backgroundColor: COLORS.background,
+        marginLeft: 220,
+        padding: "30px",
+        width: "100%",
+        paddingTop: "150px",
+      }}
+    >
       <Content style={{ width: "100%" }}>
         <div style={{ padding: "30px 50px" }}>
-          {/* Page Title */}
+          {/* Title */}
           <Title
             level={3}
             style={{
@@ -77,8 +143,12 @@ function Lectures() {
             Lectures
           </Title>
 
-          {/* Search and Add Button */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 25 ,width:"1000px"}}>
+          {/* Search + Add Button */}
+          <Row
+            align="middle"
+            justify="space-between"
+            style={{ marginBottom: 25, width: "1000px" }}
+          >
             <Input
               prefix={<SearchOutlined />}
               placeholder="Search for your lectures"
@@ -90,21 +160,25 @@ function Lectures() {
               }}
             />
             <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={showModal}
-                style={{
-                  backgroundColor: "#EDEDED",
-                  color: "#000",
-                  border: "none",
-                  height: 40,
-                  borderRadius: 10,
-                  fontWeight: 600,
-                }}
-              >
-                New Lectures
-              </Button>
+              {/* ✅ الزر يظهر فقط للمعلم */}
+              {userRole === "teacher" && (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={showModal}
+                  style={{
+                    backgroundColor: "#EDEDED",
+                    color: "#000",
+                    border: "none",
+                    height: 40,
+                    borderRadius: 10,
+                    fontWeight: 600,
+                  }}
+                >
+                  New Lecture
+                </Button>
+              )}
+
               <div
                 style={{
                   width: 40,
@@ -116,7 +190,11 @@ function Lectures() {
                   justifyContent: "center",
                 }}
               >
-                <Badge count={1} size="small" style={{ backgroundColor: "#9AB7D0" }}>
+                <Badge
+                  count={1}
+                  size="small"
+                  style={{ backgroundColor: "#9AB7D0" }}
+                >
                   <>
                     <BellFilled
                       style={{
@@ -124,19 +202,19 @@ function Lectures() {
                         color: "#000",
                         cursor: "pointer",
                       }}
-                      onClick={() => setOpen(true)} // ✅ FIXED
+                      onClick={() => setOpen(true)}
                     />
                     <NotificationsDrawer
                       open={open}
                       onClose={() => setOpen(false)}
                     />
-                </>
+                  </>
                 </Badge>
               </div>
             </Space>
           </Row>
 
-          {/* Lecture Cards */}
+          {/* ✅ Cards */}
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
             {lectures.map((lecture) => (
               <Card
@@ -149,44 +227,48 @@ function Lectures() {
                 bodyStyle={{ padding: 0 }}
               >
                 <Row align="middle" style={{ padding: 20 }}>
-                  {/* Colored Side Bar */}
                   <div
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       left: 0,
                       top: 0,
                       bottom: 0,
                       width: 12,
-                      background: lecture.color,
+                      background: "#9AB7D0",
                       borderTopLeftRadius: 14,
                       borderBottomLeftRadius: 14,
                     }}
                   />
-                  <Col style={{marginRight:"480px"}}>
-                    <Title level={5} style={{ margin: 0 ,fontWeight:"bold"}}>
+                  <Col style={{ marginRight: "480px" }}>
+                    <Title level={5} style={{ margin: 0, fontWeight: "bold" }}>
                       {lecture.title}
                     </Title>
-                    <Text style={{ color: "#9AB7D0" }}>{lecture.description}</Text>
-                    <br />
-                    <Text style={{ fontSize: 13 }}>
-                      <b>Last modified:</b> {lecture.date}
+                    <Text style={{ color: "#9AB7D0" }}>
+                      {lecture.description}
                     </Text>
                     <br />
                     <Text style={{ fontSize: 13 }}>
-                      <b>By:</b> {lecture.by}
+                      <b>Date:</b> {lecture.date || "غير محدد"}
+                    </Text>
+                    <br />
+                    <Text style={{ fontSize: 13 }}>
+                      <b>By:</b> {lecture.teacher_name || "Unknown"}
                     </Text>
                   </Col>
 
-                  {/* Actions */}
                   <Col flex={"auto"}>
                     <Space direction="vertical" align="end">
-                      <Button
-                        type="link"
-                        icon={<EyeOutlined />}
-                        style={{ color: "#000", fontWeight: 600 }}
-                      >
-                        Watch Video
-                      </Button>
+                      {lecture.video && (
+                        <Button
+                          type="link"
+                          icon={<EyeOutlined />}
+                          href={lecture.video}
+                          target="_blank"
+                          style={{ color: "#000", fontWeight: 600 }}
+                        >
+                          Watch Video
+                        </Button>
+                      )}
                       <Button
                         type="link"
                         icon={<FilePdfOutlined />}
@@ -196,22 +278,23 @@ function Lectures() {
                       </Button>
                     </Space>
                   </Col>
-                  <Col>
-                    <DropdownMenu></DropdownMenu>
-                  </Col>
-
+                  {userRole === "teacher" && (
+                    <Col>
+                      <DropdownMenu />
+                    </Col>
+                  )}
                 </Row>
               </Card>
             ))}
           </Space>
-          {/* 🧩 Custom Modal */}
+
+          {/* ✅ Modal */}
           <Modal
             open={isModalVisible}
             footer={null}
             onCancel={handleCancel}
             centered
             width={"400px"}
-            height={"450px"} 
             style={{
               borderRadius: 12,
               overflow: "hidden",
@@ -221,7 +304,6 @@ function Lectures() {
               padding: 0,
             }}
           >
-            {/* Header */}
             <div
               style={{
                 backgroundColor: "#B8CDE0",
@@ -234,78 +316,46 @@ function Lectures() {
                 Add Lecture
               </Title>
             </div>
-            {/* Body */}
+
             <div style={{ padding: "20px 25px" }}>
               <Form form={form} layout="vertical">
                 <Form.Item
                   label={<b>Lecture Title</b>}
                   name="title"
-                  rules={[{ required: true, message: "Please enter lecture title" }]}
-                  style={{ marginBottom: 15 }}
+                  rules={[
+                    { required: true, message: "Please enter lecture title" },
+                  ]}
                 >
-                  <Input
-                    placeholder="Lecture Title"
-                    size="large"
-                    style={{
-                      borderRadius: 10,
-                      height: 42,
-                    }}
-                  />
+                  <Input placeholder="Lecture Title" size="large" />
                 </Form.Item>
 
                 <Form.Item
                   label={<b>Lecture Description</b>}
                   name="description"
-                  rules={[{ required: true, message: "Please enter description" }]}
-                  style={{ marginBottom: 15 }}
+                  rules={[
+                    { required: true, message: "Please enter description" },
+                  ]}
                 >
-                  <Input.TextArea
-                    placeholder="Lecture Description"
-                    rows={3}
-                    style={{
-                      borderRadius: 10,
-                      resize: "none",
-                      height: 70,
-                    }}
-                  />
+                  <Input.TextArea rows={3} />
                 </Form.Item>
 
-                <Form.Item name="video" style={{ marginBottom: 15 }}>
-                  <Upload beforeUpload={() => false} showUploadList={false}>
-                    <Button
-                      icon={<VideoCameraAddOutlined />}
-                      style={{
-                        border: "1px solid #ccc",
-                        borderRadius: 10,
-                        height: 50,
-                        width: "100%",
-                        fontWeight: 600,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      Add Video
-                    </Button>
-                  </Upload>
+                <Form.Item name="video">
+                  <Input placeholder="Video URL (اختياري)" />
                 </Form.Item>
 
-                <div style={{display:"flex",justifyContent:"end"}}>
+                <div style={{ display: "flex", justifyContent: "end" }}>
                   <Button
                     type="primary"
                     icon={<UploadOutlined />}
-                    block
                     onClick={handleOk}
                     style={{
-                      alignItems:"center",
                       backgroundColor: "#B8CDE0",
                       border: "none",
                       color: "#000",
                       borderRadius: 10,
                       fontWeight: 600,
-                      width:150,
-                      height: 45, // 🔹 reduced height to match your picture
+                      width: 150,
+                      height: 45,
                     }}
                   >
                     Upload

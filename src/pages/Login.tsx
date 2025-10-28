@@ -8,7 +8,7 @@ import { COLORS } from "../constants/colors";
 import { useNavigate } from "react-router-dom";
 
 // ✅ استيراد الدوال الجاهزة من ملف الـ API
-import { loginUser, getUserProfile } from "../api/api";
+import { loginUser, getUserProfile } from "../API/api";
 
 function Login() {
   const login = useAuthStore((state) => state.login);
@@ -24,15 +24,18 @@ function Login() {
       const data = await loginUser(values.email, values.password);
       const { access, refresh } = data;
 
-      // 🔹 حفظ التوكنات في localStorage
-      localStorage.setItem("accessToken", access);
-      localStorage.setItem("refreshToken", refresh);
+      // 🔹 حفظ التوكنات في localStorage (نفس الأسماء المستخدمة في Lectures.tsx)
+      localStorage.setItem("access_token", access);
+      localStorage.setItem("refresh_token", refresh);
 
       // 🔹 تحديث الحالة في store
       login(values.email, access);
 
       // 🔹 جلب بيانات المستخدم لتحديد الدور
       const user = await getUserProfile(access);
+
+      // 🔹 حفظ بيانات المستخدم في localStorage حتى نستخدمها لاحقًا في المحاضرات
+      localStorage.setItem("user", JSON.stringify(user));
 
       message.success("✅ Logged in successfully!");
 
@@ -65,6 +68,7 @@ function Login() {
       }}
     >
       <Row gutter={0} style={{ flex: 1, width: "100%", margin: 0 }}>
+        {/* القسم الأيسر - الصورة */}
         <Col
           xs={0}
           sm={0}
@@ -85,6 +89,7 @@ function Login() {
           />
         </Col>
 
+        {/* القسم الأيمن - الفورم */}
         <Col
           xs={24}
           sm={24}
@@ -125,7 +130,6 @@ function Login() {
               <Form.Item
                 label="Email"
                 name="email"
-                style={{ fontFamily: "Inter" }}
                 rules={[{ required: true, message: "Please enter your email!" }]}
               >
                 <Input placeholder="Enter Your Email" />
@@ -134,7 +138,6 @@ function Login() {
               <Form.Item
                 label="Password"
                 name="password"
-                style={{ fontFamily: "Inter" }}
                 rules={[{ required: true, message: "Please enter your password!" }]}
               >
                 <Input.Password placeholder="Enter Your Password" />

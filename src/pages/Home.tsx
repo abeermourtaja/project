@@ -11,12 +11,21 @@ import { Content } from "antd/es/layout/layout";
 import { COLORS } from "../constants/colors";
 import { useNavigate } from "react-router-dom";
 import NotificationsDrawer from "./Notifications";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function Home() {
   const { Title, Text } = Typography;
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  // ✅ تحميل بيانات المستخدم من localStorage عند فتح الصفحة
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   return (
     <Layout
@@ -78,10 +87,7 @@ function Home() {
                   }}
                   onClick={() => setOpen(true)} // ✅ FIXED
                 />
-                <NotificationsDrawer
-                  open={open}
-                  onClose={() => setOpen(false)}
-                />
+                <NotificationsDrawer open={open} onClose={() => setOpen(false)} />
               </>
             </Badge>
           </div>
@@ -104,7 +110,7 @@ function Home() {
           <Row align="middle" justify="space-between">
             <Col span={16}>
               <Title level={3} style={{ margin: 0 }}>
-                Hi, Sara
+                Hi, {user?.name || "Student"}
               </Title>
               <Text style={{ fontSize: 16 }}>
                 Welcome to your course! Stay focused and keep going until the end.
@@ -142,11 +148,7 @@ function Home() {
           >
             Announcements:
           </Title>
-          <Space
-            direction="vertical"
-            size="large"
-            style={{ fontSize: "17px" }}
-          >
+          <Space direction="vertical" size="large" style={{ fontSize: "17px" }}>
             <Text>
               <FileTextOutlined style={{ marginRight: 8, color: "#000" }} />
               <b>New Assignment:</b> Assignment Lab 1 has been uploaded.

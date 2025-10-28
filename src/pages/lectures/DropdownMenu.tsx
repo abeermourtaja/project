@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Dropdown, Space, type MenuProps } from "antd";
 import {
   MoreOutlined,
@@ -13,7 +14,21 @@ import {
 } from "@ant-design/icons";
 
 const DropdownMenu = () => {
-  // Define menu items (Ant Design v5 uses `menu={{ items }}`)
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // ✅ نقرأ الدور من localStorage (teacher أو student)
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      setUserRole(user.role);
+    }
+  }, []);
+
+  // ✅ نحدد إذا المستخدم معلم
+  const isTeacher = userRole === "teacher";
+
+  // ✅ القائمة
   const items: MenuProps["items"] = [
     {
       key: "open-with",
@@ -81,20 +96,32 @@ const DropdownMenu = () => {
     {
       key: "edit",
       label: (
-        <span style={{ display: "flex", alignItems: "center", color: "#bbb" }}>
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            color: isTeacher ? "#000" : "#bbb",
+          }}
+        >
           <EditOutlined style={{ marginRight: 8 }} /> Edit
         </span>
       ),
-      disabled: true,
+      disabled: !isTeacher, // 👈 الطالب ما يقدر يضغط
     },
     {
       key: "delete",
       label: (
-        <span style={{ display: "flex", alignItems: "center", color: "#bbb" }}>
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            color: isTeacher ? "#d32029" : "#bbb",
+          }}
+        >
           <DeleteOutlined style={{ marginRight: 8 }} /> Delete
         </span>
       ),
-      disabled: true,
+      disabled: !isTeacher, // 👈 الطالب ما يقدر يحذف
     },
   ];
 
