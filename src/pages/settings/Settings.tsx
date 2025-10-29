@@ -6,12 +6,14 @@ import {
   FileTextOutlined,
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
-import { COLORS } from "../constants/colors";
+import { COLORS } from "../../constants/colors";
+import { useNavigate } from "react-router-dom";
 
 const { Content } = Layout;
 const { Title } = Typography;
 
 function Settings() {
+    const navigate = useNavigate();
   return (
     <Layout
       style={{
@@ -70,6 +72,7 @@ function Settings() {
                   textAlign: "left",
                   width:"1000px",
                 }}
+                onClick={() => navigate("/settings/account-information")}
               >
                 Account Information
               </Button>
@@ -84,6 +87,7 @@ function Settings() {
                   height: 45,
                   textAlign: "left",
                 }}
+                onClick={() => navigate("/settings/change-password")}
               >
                 Change Password
               </Button>
@@ -122,6 +126,7 @@ function Settings() {
                   height: 45,
                   textAlign: "left",
                 }}
+                onClick={() => navigate("/settings/language")}
               >
                 Language
               </Button>

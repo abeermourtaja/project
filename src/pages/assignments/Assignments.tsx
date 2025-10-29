@@ -6,6 +6,7 @@ import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import UploadAssignmentModal from "./UploadAssignmentModal";
 import NotificationsDrawer from "../Notifications";
+import AddSubmissionModal from "./AddSubmissionModal";
 
 const { Title, Text } = Typography;
 
@@ -14,6 +15,7 @@ function Assignments() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   // ✅ Static Assignments Data
   const assignments = [
@@ -230,6 +232,7 @@ function Assignments() {
                         height: 40,
                         width: 150,
                       }}
+                      onClick={() => setIsAddModalVisible(true)}
                     >
                       Add Submission
                     </Button>
@@ -245,6 +248,15 @@ function Assignments() {
             handleOk={handleOk}
             handleCancel={handleCancel}
           />
+          <AddSubmissionModal
+            visible={isAddModalVisible}
+            onCancel={() => setIsAddModalVisible(false)}
+            onSubmit={(files) => {
+              console.log("Submitted files:", files);
+              setIsAddModalVisible(false);
+            }}
+/>
+
         </div>
       </Content>
     </Layout>

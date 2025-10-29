@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import { Modal, Button, Typography } from "antd";
 
 const { Text } = Typography;
@@ -16,7 +15,7 @@ function LogoutModal({ visible, onCancel, onConfirm }: LogoutModalProps) {
       centered
       footer={null}
       closable={false}
-      width={400}
+      width={550}
       bodyStyle={{
         textAlign: "center",
         padding: "30px 20px",
@@ -62,3 +61,4 @@ function LogoutModal({ visible, onCancel, onConfirm }: LogoutModalProps) {
     </Modal>
   );
 }
+export default LogoutModal;
