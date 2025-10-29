@@ -43,11 +43,11 @@ function Lectures() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [fileUrl, setFileUrl] = useState<string>("");
+  const [fileObj, setFileObj] = useState<File | null>(null); // ✅ الملف الحقيقي
 
   // ✅ تحميل بيانات المستخدم والمحاضرات
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("access_token"); // ✅ تأكدنا من الاسم الصحيح
     if (!token) {
       message.error("الرجاء تسجيل الدخول أولاً");
       navigate("/login");
@@ -85,18 +85,21 @@ function Lectures() {
 
   // ✅ المودال
   const showModal = () => setIsModalVisible(true);
-  const handleCancel = () => setIsModalVisible(false);
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    form.resetFields();
+    setFileObj(null);
+  };
 
-  // ✅ رفع الملف
-  const handleUpload = (file: any) => {
-    const fileURL = URL.createObjectURL(file);
-    setFileUrl(fileURL);
+  // ✅ رفع الملف (بدون رفع تلقائي)
+  const handleUpload = (file: File) => {
+    setFileObj(file);
     return false;
   };
 
   // ✅ إضافة محاضرة جديدة
   const handleOk = async () => {
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("access_token");
     if (!token) {
       message.error("الرجاء تسجيل الدخول أولاً");
       return;
@@ -110,7 +113,7 @@ function Lectures() {
     try {
       const values = await form.validateFields();
 
-      if (!fileUrl) {
+      if (!fileObj) {
         message.error("يرجى رفع ملف المحاضرة!");
         return;
       }
@@ -121,7 +124,7 @@ function Lectures() {
         title: values.title,
         description: values.description,
         video: values.video,
-        file: fileUrl,
+        file: fileObj,
         date: new Date().toLocaleDateString("en-GB"),
         teacher_name: user.name || "Unknown Teacher",
       };
@@ -133,7 +136,7 @@ function Lectures() {
       setFilteredLectures(updated);
       setIsModalVisible(false);
       form.resetFields();
-      setFileUrl("");
+      setFileObj(null);
     } catch (error: any) {
       console.error("❌ Error adding lecture:", error);
       message.error("حدث خطأ أثناء رفع المحاضرة.");
@@ -170,6 +173,7 @@ function Lectures() {
               background: COLORS.background,
               zIndex: 10,
               paddingBottom: 20,
+              marginBottom: 30,
             }}
           >
             <Col flex="auto">
@@ -371,7 +375,11 @@ function Lectures() {
                   <Upload beforeUpload={handleUpload} accept=".pdf,.doc,.docx,.ppt,.pptx">
                     <Button icon={<UploadOutlined />}>Select File</Button>
                   </Upload>
-                  {fileUrl && <p style={{ marginTop: 8, color: "green" }}>✔ File ready to upload</p>}
+                  {fileObj && (
+                    <p style={{ marginTop: 8, color: "green" }}>
+                      ✔ {fileObj.name} جاهز للرفع
+                    </p>
+                  )}
                 </Form.Item>
 
                 <div style={{ display: "flex", justifyContent: "end" }}>

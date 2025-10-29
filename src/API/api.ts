@@ -60,18 +60,29 @@ export async function getAssignments(token: string) {
 }
 
 // ✅ إضافة محاضرة جديدة (للمعلم فقط)
+// ✅ إضافة محاضرة جديدة (للمعلم فقط)
 export async function addLecture(token: string, lectureData: any) {
   try {
+    // 🧠 تجهيز البيانات لرفع ملف (FormData)
+    const formData = new FormData();
+    formData.append("title", lectureData.title);
+    formData.append("description", lectureData.description);
+    formData.append("video", lectureData.video);
+    if (lectureData.file) {
+      formData.append("file", lectureData.file); // 🔹 الملف اللي المعلم يختاره
+    }
+
     const response = await axios.post(
-      "https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/lectures/",
-      lectureData,
+      ENDPOINTS.lectures, // ✅ نستخدم الرابط من endpoints.ts
+      formData,
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          "Content-Type": "multipart/form-data", // ✅ ضروري لرفع الملفات
         },
       }
     );
+
     console.log("✅ Lecture added successfully:", response.data);
     return response.data;
   } catch (error: any) {
@@ -79,3 +90,4 @@ export async function addLecture(token: string, lectureData: any) {
     throw error;
   }
 }
+
