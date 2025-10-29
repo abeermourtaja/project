@@ -2,12 +2,15 @@ import React, { useState } from "react";
 import { Button, Col, Form, Input, Row, message } from "antd";
 import SignupImage from "../assets/signup.png";
 import { COLORS } from "../constants/colors";
-import { useNavigate } from "react-router-dom";
-import { registerUser } from "../API/api"; // ✅ تأكدي إن المسار كله lowercase
+import { useNavigate, Link } from "react-router-dom";
+import { registerUser } from "../API/api";
+import { useUserStore } from "../store/useUserStore";
 
 function Signup() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const { setUser } = useUserStore();
+  const [showPasswordChecks, setShowPasswordChecks] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
 
   // ✅ فحص الشروط
@@ -20,43 +23,33 @@ function Signup() {
   };
 
   const onFinish = async (values: any) => {
+    const { username, email, password, phone } = values;
     const allOk = Object.values(checks).every(Boolean);
+
     if (!allOk) {
-      message.error("كلمة المرور لا تستوفي الشروط المطلوبة. الرجاء مراجعة القائمة.");
+      setShowPasswordChecks(true);
+      message.error("Password does not meet the security requirements.");
       return;
     }
 
     try {
-      const { username, email, password } = values;
       const result = await registerUser(username, email, password);
+      setUser(result);
 
-      console.log("✅ Backend response:", result);
-
-      // ✅ رسالة نجاح واضحة
-      message.success("🎉 تم إنشاء الحساب بنجاح! سيتم تحويلك لتسجيل الدخول...");
+      message.success("🎉 Account created successfully! Redirecting to login...");
       form.resetFields();
-
-      // ⏳ تحويل بعد 1.5 ثانية
-      setTimeout(() => navigate("/login"), 1500);
-
+      setTimeout(() => navigate("/login"), 2000);
     } catch (error: any) {
       console.error("❌ Error during signup:", error);
       const backendError = error.response?.data;
 
       if (backendError) {
-        if (backendError.username) {
-          message.error(backendError.username[0]);
-        } else if (backendError.email) {
-          message.error(backendError.email[0]);
-        } else if (backendError.password) {
-          message.error(backendError.password[0]);
-        } else if (backendError.password_confirm) {
-          message.error(backendError.password_confirm[0]);
-        } else {
-          message.error("حدث خطأ أثناء إنشاء الحساب. حاول مرة أخرى.");
-        }
+        if (backendError.username) message.error(backendError.username[0]);
+        else if (backendError.email) message.error(backendError.email[0]);
+        else if (backendError.password) message.error(backendError.password[0]);
+        else message.error("An error occurred during signup. Try again.");
       } else {
-        message.error("تعذر الاتصال بالخادم. تأكد من الإنترنت أو حاول لاحقًا.");
+        message.error("Server connection failed. Check your internet.");
       }
     }
   };
@@ -66,14 +59,12 @@ function Signup() {
       style={{
         height: "100vh",
         width: "100vw",
-        margin: 0,
-        padding: 0,
         display: "flex",
         flexDirection: "column",
       }}
     >
-      <Row gutter={0} style={{ flex: 1, width: "100%", margin: 0 }}>
-        {/* ✅ الصورة الجانبية */}
+      <Row gutter={0} style={{ flex: 1, width: "100%" }}>
+        {/* ✅ Left Image Section */}
         <Col
           xs={0}
           sm={0}
@@ -93,7 +84,7 @@ function Signup() {
           />
         </Col>
 
-        {/* ✅ نموذج التسجيل */}
+        {/* ✅ Right Form Section */}
         <Col
           xs={24}
           sm={24}
@@ -133,9 +124,11 @@ function Signup() {
               form={form}
               layout="vertical"
               onFinish={onFinish}
-              onFinishFailed={() => message.error("تأكدي من ملء جميع الحقول بشكل صحيح")}
+              onFinishFailed={() =>
+                message.error("Please fill all fields correctly.")
+              }
             >
-              {/* 🟩 الاسم */}
+              {/* 🟩 Name */}
               <Form.Item
                 label="Name"
                 name="username"
@@ -144,7 +137,7 @@ function Signup() {
                 <Input placeholder="Enter your Name" />
               </Form.Item>
 
-              {/* 🟩 البريد الإلكتروني */}
+              {/* 🟩 Email */}
               <Form.Item
                 label="Email"
                 name="email"
@@ -156,59 +149,93 @@ function Signup() {
                 <Input placeholder="Enter your Email" />
               </Form.Item>
 
-              {/* 🟩 كلمة المرور */}
+              {/* 🟩 Phone Number */}
+              <Form.Item
+                label="Phone Number"
+                name="phone"
+                rules={[
+                  { required: true, message: "Please enter your Phone Number!" },
+                  {
+                    pattern: /^[0-9]{9,15}$/,
+                    message: "Please enter a valid phone number!",
+                  },
+                ]}
+              >
+                <Input placeholder="Enter your Phone Number" />
+              </Form.Item>
+
+              {/* 🟩 Password */}
               <Form.Item
                 label="Password"
                 name="password"
+                hasFeedback
                 rules={[
                   { required: true, message: "Please enter your Password!" },
-                  () => ({
-                    validator(_, value) {
-                      if (!value) return Promise.reject(new Error("Please enter your Password!"));
-                      const pass = value as string;
-                      const ok =
-                        pass.length >= 8 &&
-                        /[A-Z]/.test(pass) &&
-                        /[a-z]/.test(pass) &&
-                        /[0-9]/.test(pass) &&
-                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(pass);
-                      return ok ? Promise.resolve() : Promise.reject(new Error("كلمة المرور لا تستوفي الشروط الأمنية"));
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.reject("Please enter your Password!");
+                      const isValid =
+                        value.length >= 8 &&
+                        /[A-Z]/.test(value) &&
+                        /[a-z]/.test(value) &&
+                        /[0-9]/.test(value) &&
+                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value);
+                      return isValid
+                        ? Promise.resolve()
+                        : Promise.reject("Password does not meet security requirements.");
                     },
-                  }),
+                  },
                 ]}
-                hasFeedback
               >
                 <Input.Password
                   placeholder="Enter your Password"
-                  onChange={(e) => setPasswordValue(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPasswordValue(value);
+                    // ✅ show instructions only if password is not valid
+                    const invalid =
+                      !!value &&
+                      !(
+                        value.length >= 8 &&
+                        /[A-Z]/.test(value) &&
+                        /[a-z]/.test(value) &&
+                        /[0-9]/.test(value) &&
+                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value)
+                      );
+                    setShowPasswordChecks(invalid);
+                  }}
                 />
               </Form.Item>
+              {/* 🟩 شروط كلمة المرور */}
+              {showPasswordChecks && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 14, marginBottom: 6 }}>
+                    Password must contain:
+                  </div>
+                  <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                    <li style={{ color: checks.length ? "green" : "red" }}>
+                      {checks.length ? "✅" : "❌"} At least 8 characters
+                    </li>
+                    <li style={{ color: checks.upper ? "green" : "red" }}>
+                      {checks.upper ? "✅" : "❌"} One uppercase letter
+                    </li>
+                    <li style={{ color: checks.lower ? "green" : "red" }}>
+                      {checks.lower ? "✅" : "❌"} One lowercase letter
+                    </li>
+                    <li style={{ color: checks.number ? "green" : "red" }}>
+                      {checks.number ? "✅" : "❌"} One number
+                    </li>
+                    <li style={{ color: checks.special ? "green" : "red" }}>
+                      {checks.special ? "✅" : "❌"} One special symbol
+                    </li>
+                  </ul>
+                </div>
+              )}
 
-              {/* 🟩 الشروط */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 14, marginBottom: 6 }}>شروط كلمة المرور:</div>
-                <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                  <li style={{ color: checks.length ? "green" : "#666", marginBottom: 4 }}>
-                    {checks.length ? "✅" : "⬜️"} على الأقل 8 أحرف
-                  </li>
-                  <li style={{ color: checks.number ? "green" : "#666", marginBottom: 4 }}>
-                    {checks.number ? "✅" : "⬜️"} يحتوي على رقم واحد على الأقل
-                  </li>
-                  <li style={{ color: checks.upper ? "green" : "#666", marginBottom: 4 }}>
-                    {checks.upper ? "✅" : "⬜️"} يحتوي على حرف كبير واحد على الأقل
-                  </li>
-                  <li style={{ color: checks.lower ? "green" : "#666", marginBottom: 4 }}>
-                    {checks.lower ? "✅" : "⬜️"} يحتوي على حرف صغير واحد على الأقل
-                  </li>
-                  <li style={{ color: checks.special ? "green" : "#666", marginBottom: 4 }}>
-                    {checks.special ? "✅" : "⬜️"} يحتوي على رمز خاص واحد على الأقل (مثل @ # $ !)
-                  </li>
-                </ul>
-              </div>
 
-              {/* 🟩 تأكيد كلمة المرور */}
+              {/* 🟩 Confirm Password */}
               <Form.Item
-                label="Confirm password"
+                label="Confirm Password"
                 name="confirmPassword"
                 dependencies={["password"]}
                 hasFeedback
@@ -219,7 +246,9 @@ function Signup() {
                       if (!value || getFieldValue("password") === value) {
                         return Promise.resolve();
                       }
-                      return Promise.reject(new Error("كلمتا المرور غير متطابقتين ⚠️"));
+                      return Promise.reject(
+                        new Error("Passwords do not match ⚠️")
+                      );
                     },
                   }),
                 ]}
@@ -243,6 +272,17 @@ function Signup() {
                   Sign up
                 </Button>
               </Form.Item>
+
+              {/* 🟩 روابط إضافية */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent:"center",
+                  fontSize: "14px",
+                }}
+              >
+                <Link style={{color:"black"}} to="/login">Already have an account ? Login</Link>
+              </div>
             </Form>
           </div>
         </Col>
@@ -252,5 +292,3 @@ function Signup() {
 }
 
 export default Signup;
-
-
