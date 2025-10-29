@@ -25,8 +25,9 @@ function Login() {
       const { access, refresh } = data;
 
       // 🔹 حفظ التوكنات في localStorage (نفس الأسماء المستخدمة في Lectures.tsx)
-      localStorage.setItem("access_token", access);
-      localStorage.setItem("refresh_token", refresh);
+     localStorage.setItem("accessToken", access);
+     localStorage.setItem("refreshToken", refresh);
+
 
       // 🔹 تحديث الحالة في store
       login(values.email, access);
@@ -199,3 +200,4 @@ function Login() {
 }
 
 export default Login;
+

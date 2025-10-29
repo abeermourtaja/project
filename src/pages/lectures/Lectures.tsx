@@ -59,7 +59,8 @@ function Lectures() {
     // 🔹 جلب المحاضرات
     getLectures(token)
       .then((data) => {
-        setLectures(data);
+        setLectures(Array.isArray(data) ? data : data.lectures || []);
+
       })
       .catch(() => {
         message.error("فشل في تحميل المحاضرات 😢");
