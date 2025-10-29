@@ -13,6 +13,8 @@ import {
   Layout,
   message,
   Spin,
+  Upload,
+  Empty,
 } from "antd";
 import {
   SearchOutlined,
@@ -27,7 +29,7 @@ import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import DropdownMenu from "./DropdownMenu";
 import NotificationsDrawer from "../Notifications";
-import { getLectures, addLecture } from "../../API/api"; // ✅ ربط مع الباك
+import { getLectures, addLecture } from "../../API/api";
 
 const { Title, Text } = Typography;
 
@@ -37,30 +39,32 @@ function Lectures() {
   const [form] = Form.useForm();
   const [open, setOpen] = useState(false);
   const [lectures, setLectures] = useState<any[]>([]);
+  const [filteredLectures, setFilteredLectures] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string>("");
 
-  // ✅ تحميل بيانات المستخدم والمحاضرات عند الدخول
+  // ✅ تحميل بيانات المستخدم والمحاضرات
   useEffect(() => {
-    const token = localStorage.getItem("accessToken"); // ✅ تصحيح اسم التوكن
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       message.error("الرجاء تسجيل الدخول أولاً");
       navigate("/login");
       return;
     }
 
-    // 🔹 جلب بيانات المستخدم من localStorage
     const userData = localStorage.getItem("user");
     if (userData) {
       const user = JSON.parse(userData);
       setUserRole(user.role);
     }
 
-    // 🔹 جلب المحاضرات
     getLectures(token)
       .then((data) => {
-        setLectures(Array.isArray(data) ? data : data.lectures || []);
-
+        const lectureList = Array.isArray(data) ? data : data.lectures || [];
+        setLectures(lectureList);
+        setFilteredLectures(lectureList);
       })
       .catch(() => {
         message.error("فشل في تحميل المحاضرات 😢");
@@ -68,13 +72,31 @@ function Lectures() {
       .finally(() => setLoading(false));
   }, [navigate]);
 
-  // ✅ فتح/إغلاق المودال
+  // ✅ فلترة البحث
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    const filtered = lectures.filter(
+      (lecture) =>
+        lecture.title.toLowerCase().includes(value.toLowerCase()) ||
+        lecture.description.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredLectures(filtered);
+  };
+
+  // ✅ المودال
   const showModal = () => setIsModalVisible(true);
   const handleCancel = () => setIsModalVisible(false);
 
-  // ✅ رفع محاضرة جديدة (للمعلم فقط)
+  // ✅ رفع الملف
+  const handleUpload = (file: any) => {
+    const fileURL = URL.createObjectURL(file);
+    setFileUrl(fileURL);
+    return false;
+  };
+
+  // ✅ إضافة محاضرة جديدة
   const handleOk = async () => {
-    const token = localStorage.getItem("accessToken"); // ✅ تصحيح اسم التوكن
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       message.error("الرجاء تسجيل الدخول أولاً");
       return;
@@ -86,28 +108,35 @@ function Lectures() {
     }
 
     try {
-      setLoading(true);
       const values = await form.validateFields();
+
+      if (!fileUrl) {
+        message.error("يرجى رفع ملف المحاضرة!");
+        return;
+      }
+
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
 
       const lectureData = {
         title: values.title,
         description: values.description,
-        video: values.video || "",
+        video: values.video,
+        file: fileUrl,
+        date: new Date().toLocaleDateString("en-GB"),
+        teacher_name: user.name || "Unknown Teacher",
       };
 
       const newLecture = await addLecture(token, lectureData);
       message.success("✅ تمت إضافة المحاضرة بنجاح!");
-
-      // ✅ أضف المحاضرة الجديدة بدون إعادة تحميل الكل
-      setLectures((prev) => [newLecture, ...prev]);
-
-      form.resetFields();
+      const updated = [newLecture, ...lectures];
+      setLectures(updated);
+      setFilteredLectures(updated);
       setIsModalVisible(false);
+      form.resetFields();
+      setFileUrl("");
     } catch (error: any) {
       console.error("❌ Error adding lecture:", error);
       message.error("حدث خطأ أثناء رفع المحاضرة.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -131,46 +160,53 @@ function Lectures() {
     >
       <Content style={{ width: "100%" }}>
         <div style={{ padding: "30px 50px" }}>
-          {/* Title */}
-          <Title
-            level={3}
-            style={{
-              color: "#21629B",
-              marginBottom: 20,
-              fontWeight: 700,
-              fontFamily: "Segoe UI, sans-serif",
-            }}
-          >
-            Lectures
-          </Title>
-
-          {/* Search + Add Button */}
+          {/* ✅ العنوان + البحث + الإشعارات */}
           <Row
             align="middle"
             justify="space-between"
-            style={{ marginBottom: 25, width: "1000px" }}
+            style={{
+              position: "sticky",
+              top: 0,
+              background: COLORS.background,
+              zIndex: 10,
+              paddingBottom: 20,
+            }}
           >
-            <Input
-              prefix={<SearchOutlined />}
-              placeholder="Search for your lectures"
-              style={{
-                width: "80%",
-                height: 40,
-                backgroundColor: "#EDEDED",
-                borderRadius: 10,
-              }}
-            />
+            <Col flex="auto">
+              <Title
+                level={3}
+                style={{
+                  color: "#21629B",
+                  fontWeight: 700,
+                  fontFamily: "Segoe UI, sans-serif",
+                }}
+              >
+                Lectures
+              </Title>
+              <Input
+                prefix={<SearchOutlined />}
+                placeholder="Search for your lectures"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+                style={{
+                  width: "90%",
+                  height: 40,
+                  backgroundColor: "#EDEDED",
+                  borderRadius: 10,
+                }}
+              />
+            </Col>
+
             <Space>
-              {/* ✅ الزر يظهر فقط للمعلم */}
               {userRole === "teacher" && (
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={showModal}
                   style={{
-                    backgroundColor: "#EDEDED",
+                    backgroundColor: "#fff",
                     color: "#000",
-                    border: "none",
+                    border: "1px solid #000",
                     height: 40,
                     borderRadius: 10,
                     fontWeight: 600,
@@ -179,131 +215,114 @@ function Lectures() {
                   New Lecture
                 </Button>
               )}
-
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 8,
-                  backgroundColor: "#fff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Badge
-                  count={1}
-                  size="small"
-                  style={{ backgroundColor: "#9AB7D0" }}
-                >
-                  <>
-                    <BellFilled
-                      style={{
-                        fontSize: 22,
-                        color: "#000",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => setOpen(true)}
-                    />
-                    <NotificationsDrawer
-                      open={open}
-                      onClose={() => setOpen(false)}
-                    />
-                  </>
-                </Badge>
-              </div>
+              <Badge count={1} size="small" style={{ backgroundColor: "#9AB7D0" }}>
+                <BellFilled
+                  style={{ fontSize: 22, color: "#000", cursor: "pointer" }}
+                  onClick={() => setOpen(true)}
+                />
+                <NotificationsDrawer open={open} onClose={() => setOpen(false)} />
+              </Badge>
             </Space>
           </Row>
 
-          {/* ✅ Cards */}
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            {lectures.map((lecture) => (
-              <Card
-                key={lecture.id}
-                style={{
-                  borderRadius: 10,
-                  backgroundColor: "#F5F5F5",
-                  padding: 0,
-                }}
-                bodyStyle={{ padding: 0 }}
-              >
-                <Row align="middle" style={{ padding: 20 }}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: 12,
-                      background: "#9AB7D0",
-                      borderTopLeftRadius: 14,
-                      borderBottomLeftRadius: 14,
-                    }}
-                  />
-                  <Col style={{ marginRight: "480px" }}>
-                    <Title level={5} style={{ margin: 0, fontWeight: "bold" }}>
-                      {lecture.title}
-                    </Title>
-                    <Text style={{ color: "#9AB7D0" }}>
-                      {lecture.description}
-                    </Text>
-                    <br />
-                    <Text style={{ fontSize: 13 }}>
-                      <b>Date:</b> {lecture.date || "غير محدد"}
-                    </Text>
-                    <br />
-                    <Text style={{ fontSize: 13 }}>
-                      <b>By:</b> {lecture.teacher_name || "Unknown"}
-                    </Text>
-                  </Col>
-
-                  <Col flex={"auto"}>
-                    <Space direction="vertical" align="end">
-                      {lecture.video && (
-                        <Button
-                          type="link"
-                          icon={<EyeOutlined />}
-                          href={lecture.video}
-                          target="_blank"
-                          style={{ color: "#000", fontWeight: 600 }}
-                        >
-                          Watch Video
-                        </Button>
-                      )}
-                      <Button
-                        type="link"
-                        icon={<FilePdfOutlined />}
-                        style={{ color: "#000", fontWeight: 600 }}
-                      >
-                        Lecture File
-                      </Button>
-                    </Space>
-                  </Col>
-                  {userRole === "teacher" && (
-                    <Col>
-                      <DropdownMenu />
+          {/* ✅ عرض المحاضرات */}
+          {filteredLectures.length === 0 ? (
+            <div style={{ textAlign: "center", marginTop: 100 }}>
+              <Empty
+                description={
+                  searchTerm
+                    ? "No lectures found matching your search."
+                    : userRole === "teacher"
+                    ? "No lectures yet! Add your first lecture so students can start learning and following your course."
+                    : "No lectures yet!"
+                }
+              />
+            </div>
+          ) : (
+            <Space direction="vertical" style={{ width: "100%" }} size="middle">
+              {filteredLectures.map((lecture) => (
+                <Card
+                  key={lecture.id}
+                  style={{
+                    borderRadius: 10,
+                    backgroundColor: "#F5F5F5",
+                    padding: 0,
+                  }}
+                  bodyStyle={{ padding: 0 }}
+                >
+                  <Row align="middle" style={{ padding: 20, position: "relative" }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: 12,
+                        background: "#9AB7D0",
+                        borderTopLeftRadius: 14,
+                        borderBottomLeftRadius: 14,
+                      }}
+                    />
+                    <Col style={{ marginRight: "480px" }}>
+                      <Title level={5} style={{ margin: 0, fontWeight: "bold" }}>
+                        {lecture.title}
+                      </Title>
+                      <Text style={{ color: "#9AB7D0" }}>{lecture.description}</Text>
+                      <br />
+                      <Text style={{ fontSize: 13 }}>
+                        <b>Date:</b> {lecture.date}
+                      </Text>
+                      <br />
+                      <Text style={{ fontSize: 13 }}>
+                        <b>By:</b> {lecture.teacher_name}
+                      </Text>
                     </Col>
-                  )}
-                </Row>
-              </Card>
-            ))}
-          </Space>
 
-          {/* ✅ Modal */}
+                    <Col flex={"auto"}>
+                      <Space direction="vertical" align="end">
+                        {lecture.video && (
+                          <Button
+                            type="link"
+                            icon={<EyeOutlined />}
+                            href={lecture.video}
+                            target="_blank"
+                            style={{ color: "#000", fontWeight: 600 }}
+                          >
+                            Watch Video
+                          </Button>
+                        )}
+                        {lecture.file && (
+                          <Button
+                            type="link"
+                            icon={<FilePdfOutlined />}
+                            href={lecture.file}
+                            target="_blank"
+                            style={{ color: "#000", fontWeight: 600 }}
+                          >
+                            Lecture File
+                          </Button>
+                        )}
+                      </Space>
+                    </Col>
+                    {userRole === "teacher" && (
+                      <Col>
+                        <DropdownMenu />
+                      </Col>
+                    )}
+                  </Row>
+                </Card>
+              ))}
+            </Space>
+          )}
+
+          {/* ✅ المودال */}
           <Modal
             open={isModalVisible}
             footer={null}
             onCancel={handleCancel}
             centered
             width={"400px"}
-            style={{
-              borderRadius: 12,
-              overflow: "hidden",
-              padding: 0,
-            }}
-            bodyStyle={{
-              padding: 0,
-            }}
+            style={{ borderRadius: 12, overflow: "hidden" }}
           >
             <div
               style={{
@@ -323,9 +342,7 @@ function Lectures() {
                 <Form.Item
                   label={<b>Lecture Title</b>}
                   name="title"
-                  rules={[
-                    { required: true, message: "Please enter lecture title" },
-                  ]}
+                  rules={[{ required: true, message: "Please enter lecture title" }]}
                 >
                   <Input placeholder="Lecture Title" size="large" />
                 </Form.Item>
@@ -333,15 +350,28 @@ function Lectures() {
                 <Form.Item
                   label={<b>Lecture Description</b>}
                   name="description"
-                  rules={[
-                    { required: true, message: "Please enter description" },
-                  ]}
+                  rules={[{ required: true, message: "Please enter description" }]}
                 >
                   <Input.TextArea rows={3} />
                 </Form.Item>
 
-                <Form.Item name="video">
-                  <Input placeholder="Video URL (اختياري)" />
+                <Form.Item
+                  label={<b>Lecture Video Link</b>}
+                  name="video"
+                  rules={[{ required: true, message: "Please enter video link" }]}
+                >
+                  <Input placeholder="Enter lecture video link" />
+                </Form.Item>
+
+                <Form.Item
+                  label={<b>Lecture File</b>}
+                  name="file"
+                  rules={[{ required: true, message: "Please upload a file" }]}
+                >
+                  <Upload beforeUpload={handleUpload} accept=".pdf,.doc,.docx,.ppt,.pptx">
+                    <Button icon={<UploadOutlined />}>Select File</Button>
+                  </Upload>
+                  {fileUrl && <p style={{ marginTop: 8, color: "green" }}>✔ File ready to upload</p>}
                 </Form.Item>
 
                 <div style={{ display: "flex", justifyContent: "end" }}>
