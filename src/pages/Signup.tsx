@@ -166,46 +166,50 @@ function Signup() {
 
               {/* 🟩 Password */}
               <Form.Item
-                label="Password"
-                name="password"
-                hasFeedback
-                rules={[
-                  { required: true, message: "Please enter your Password!" },
-                  {
-                    validator: (_, value) => {
-                      if (!value) return Promise.reject("Please enter your Password!");
-                      const isValid =
-                        value.length >= 8 &&
-                        /[A-Z]/.test(value) &&
-                        /[a-z]/.test(value) &&
-                        /[0-9]/.test(value) &&
-                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value);
-                      return isValid
-                        ? Promise.resolve()
-                        : Promise.reject("Password does not meet security requirements.");
-                    },
-                  },
-                ]}
-              >
-                <Input.Password
-                  placeholder="Enter your Password"
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setPasswordValue(value);
-                    // ✅ show instructions only if password is not valid
-                    const invalid =
-                      !!value &&
-                      !(
-                        value.length >= 8 &&
-                        /[A-Z]/.test(value) &&
-                        /[a-z]/.test(value) &&
-                        /[0-9]/.test(value) &&
-                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value)
-                      );
-                    setShowPasswordChecks(invalid);
-                  }}
-                />
-              </Form.Item>
+  label="Password"
+  name="password"
+  hasFeedback
+  rules={[
+    {
+      validator: (_, value) => {
+        if (!value) {
+          return Promise.reject("Please enter your Password!");
+        }
+
+        const isValid =
+          value.length >= 8 &&
+          /[A-Z]/.test(value) &&
+          /[a-z]/.test(value) &&
+          /[0-9]/.test(value) &&
+          /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value);
+
+        return isValid
+          ? Promise.resolve()
+          : Promise.reject("Password does not meet security requirements.");
+      },
+    },
+  ]}
+>
+  <Input.Password
+    placeholder="Enter your Password"
+    onChange={(e) => {
+      const value = e.target.value;
+      setPasswordValue(value);
+
+      // ✅ Show instructions only if password is invalid
+      const invalid =
+        !!value &&
+        !(
+          value.length >= 8 &&
+          /[A-Z]/.test(value) &&
+          /[a-z]/.test(value) &&
+          /[0-9]/.test(value) &&
+          /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value)
+        );
+      setShowPasswordChecks(invalid);
+    }}
+  />
+</Form.Item>
               {/* 🟩 شروط كلمة المرور */}
               {showPasswordChecks && (
                 <div style={{ marginBottom: 12 }}>
