@@ -168,15 +168,44 @@ function Signup() {
               <Form.Item
                 label="Password"
                 name="password"
-                rules={[{ required: true, message: "Please enter your Password!" }]}
                 hasFeedback
+                rules={[
+                  { required: true, message: "Please enter your Password!" },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.reject("Please enter your Password!");
+                      const isValid =
+                        value.length >= 8 &&
+                        /[A-Z]/.test(value) &&
+                        /[a-z]/.test(value) &&
+                        /[0-9]/.test(value) &&
+                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value);
+                      return isValid
+                        ? Promise.resolve()
+                        : Promise.reject("Password does not meet security requirements.");
+                    },
+                  },
+                ]}
               >
                 <Input.Password
                   placeholder="Enter your Password"
-                  onChange={(e) => setPasswordValue(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPasswordValue(value);
+                    // ✅ show instructions only if password is not valid
+                    const invalid =
+                      !!value &&
+                      !(
+                        value.length >= 8 &&
+                        /[A-Z]/.test(value) &&
+                        /[a-z]/.test(value) &&
+                        /[0-9]/.test(value) &&
+                        /[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]/.test(value)
+                      );
+                    setShowPasswordChecks(invalid);
+                  }}
                 />
               </Form.Item>
-
               {/* 🟩 شروط كلمة المرور */}
               {showPasswordChecks && (
                 <div style={{ marginBottom: 12 }}>
@@ -184,24 +213,25 @@ function Signup() {
                     Password must contain:
                   </div>
                   <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                    <li style={{ color: checks.length ? "green" : "#666" }}>
-                      {checks.length ? "✅" : "⬜️"} At least 8 characters
+                    <li style={{ color: checks.length ? "green" : "red" }}>
+                      {checks.length ? "✅" : "❌"} At least 8 characters
                     </li>
-                    <li style={{ color: checks.upper ? "green" : "#666" }}>
-                      {checks.upper ? "✅" : "⬜️"} One uppercase letter
+                    <li style={{ color: checks.upper ? "green" : "red" }}>
+                      {checks.upper ? "✅" : "❌"} One uppercase letter
                     </li>
-                    <li style={{ color: checks.lower ? "green" : "#666" }}>
-                      {checks.lower ? "✅" : "⬜️"} One lowercase letter
+                    <li style={{ color: checks.lower ? "green" : "red" }}>
+                      {checks.lower ? "✅" : "❌"} One lowercase letter
                     </li>
-                    <li style={{ color: checks.number ? "green" : "#666" }}>
-                      {checks.number ? "✅" : "⬜️"} One number
+                    <li style={{ color: checks.number ? "green" : "red" }}>
+                      {checks.number ? "✅" : "❌"} One number
                     </li>
-                    <li style={{ color: checks.special ? "green" : "#666" }}>
-                      {checks.special ? "✅" : "⬜️"} One special symbol
+                    <li style={{ color: checks.special ? "green" : "red" }}>
+                      {checks.special ? "✅" : "❌"} One special symbol
                     </li>
                   </ul>
                 </div>
               )}
+
 
               {/* 🟩 Confirm Password */}
               <Form.Item
