@@ -1,7 +1,9 @@
-import { Layout, Typography, Select, Button, Row, Form, Col } from "antd";
+import { Layout, Typography, Select, Button, Row, Form, Col, message } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -10,13 +12,26 @@ const { Option } = Select;
 function LanguageSettings() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const handleSave = (values: { language: any; }) => {
-    console.log("Selected language:", values.language);
-    };
+  const { t, i18n } = useTranslation();
+
+  const handleSave = async (values: { language: string }) => {
+    try {
+      // Change language in i18n
+      await i18n.changeLanguage(values.language);
+      // Save to localStorage
+      localStorage.setItem("preferredLanguage", values.language);
+      message.success(t("Preferred language saved!"));
+      navigate("/settings");
+    } catch (error) {
+      console.error("Error saving language:", error);
+      message.error(t("An error occurred while saving the language"));
+    }
+  };
+
   const handleCancel = () => {
-        form.resetFields();
-        navigate("/settings");
-    };
+    form.resetFields();
+    navigate("/settings");
+  };
   return (
     <Layout
       style={{
@@ -60,7 +75,7 @@ function LanguageSettings() {
               margin: 0,
             }}
           >
-            Preferred Language
+            {t("Preferred Language")}
           </Title>
         </Row>
 
@@ -69,10 +84,10 @@ function LanguageSettings() {
           layout="vertical"
           form={form}
           onFinish={handleSave}
-          initialValues={{ language: "en" }}
+          initialValues={{ language: i18n.language || localStorage.getItem("preferredLanguage") || "en" }}
           requiredMark={false}
         >
-          <Form.Item label="Select Language" name="language">
+          <Form.Item label={t("Select Language")} name="language">
             <Select
               size="large"
               style={{
@@ -102,7 +117,7 @@ function LanguageSettings() {
                     color: "#000",
                   }}
                 >
-                  Save Changes
+                  {t("Save Changes")}
                 </Button>
               </Col>
 
@@ -120,7 +135,7 @@ function LanguageSettings() {
                     fontWeight: 500,
                   }}
                 >
-                  Cancel
+                  {t("Cancel")}
                 </Button>
               </Col>
             </Row>

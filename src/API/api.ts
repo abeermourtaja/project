@@ -77,22 +77,20 @@ export async function getAssignments(token: string) {
 // ✅ إضافة محاضرة جديدة (للمعلم فقط)
 export async function addLecture(token: string, lectureData: any) {
   try {
-    // 🧠 تجهيز البيانات لرفع ملف (FormData)
-    const formData = new FormData();
-    formData.append("title", lectureData.title);
-    formData.append("description", lectureData.description);
-    formData.append("video", lectureData.video);
-    if (lectureData.file) {
-      formData.append("file", lectureData.file); // 🔹 الملف اللي المعلم يختاره
-    }
+    const payload = {
+      title: lectureData.title,
+      description: lectureData.description,
+      video: lectureData.video,
+      file_link: lectureData.file_link, // 🔹 رابط الملف بدلاً من رفع الملف
+    };
 
     const response = await axios.post(
       ENDPOINTS.lectures, // ✅ نستخدم الرابط من endpoints.ts
-      formData,
+      payload,
       {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data", // ✅ ضروري لرفع الملفات
+          "Content-Type": "application/json",
         },
       }
     );
@@ -108,21 +106,19 @@ export async function addLecture(token: string, lectureData: any) {
 // ✅ إضافة واجب جديد (للمعلم فقط)
 export async function addAssignment(token: string, assignmentData: any) {
   try {
-    const formData = new FormData();
-    formData.append("title", assignmentData.title);
-    formData.append("description", assignmentData.description);
-    formData.append("due_date", assignmentData.due_date); // YYYY-MM-DD
-    formData.append("lecture", assignmentData.lecture.toString()); // رقم
-    formData.append("created_by", assignmentData.created_by.toString());
+    const payload = {
+      title: assignmentData.title,
+      description: assignmentData.description,
+      due_date: assignmentData.due_date, // YYYY-MM-DD
+      lecture: assignmentData.lecture.toString(), // رقم
+      created_by: assignmentData.created_by.toString(),
+      file_link: assignmentData.file_link, // 🔹 رابط الملف بدلاً من رفع الملف
+    };
 
-    if (assignmentData.file) {
-      formData.append("file", assignmentData.file);
-    }
-
-    const response = await axios.post(ENDPOINTS.assignments, formData, {
+    const response = await axios.post(ENDPOINTS.assignments, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+        "Content-Type": "application/json",
       },
     });
 
@@ -207,9 +203,23 @@ export async function gradeSubmission(token: string, submissionId: number, grade
   return res.data;
 }
 
+export async function updateSubmission(token: string, submissionId: number, data: any) {
+  const res = await axios.patch(`${ENDPOINTS.submissions}${submissionId}/`, data, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  });
+  return res.data;
+}
+
+export async function deleteSubmission(token: string, submissionId: number) {
+  const res = await axios.delete(`${ENDPOINTS.submissions}${submissionId}/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+}
+
 // ✅ تحديث بيانات المستخدم
-export async function updateUserProfile(token: string, userData: { name?: string; email?: string; phone?: string }) {
-  const response = await axios.post(ENDPOINTS.userProfile, userData, {
+export async function updateUserProfile(token: string, userData: { name?: string; email?: string; phone_number?: string }) {
+  const response = await axios.patch(ENDPOINTS.updateProfile, userData, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -217,12 +227,25 @@ export async function updateUserProfile(token: string, userData: { name?: string
   });
   return response.data;
 }
-
-// ✅ حذف حساب المستخدم
-export async function deleteUserAccount(token: string) {
-  const response = await axios.delete(ENDPOINTS.deleteUser, {
+export const getNotifications = async (token: string) => {
+  const res = await axios.get(ENDPOINTS.notifications, {
     headers: {
       Authorization: `Bearer ${token}`,
+    },
+  });
+  return res.data;
+};
+
+// ✅ تغيير كلمة المرور
+export async function changePassword(token: string, currentPassword: string, newPassword: string) {
+  const response = await axios.post(ENDPOINTS.changePassword, {
+    old_password: currentPassword,
+    new_password: newPassword,
+    new_password_confirm: newPassword,
+  }, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
   });
   return response.data;

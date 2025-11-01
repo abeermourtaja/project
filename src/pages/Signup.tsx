@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Button, Col, Form, Input, Row, message } from "antd";
+import { Button, Col, Form, Input, Row, message, Alert } from "antd";
 import SignupImage from "../assets/signup.png";
+import { CloseCircleOutlined } from "@ant-design/icons";
 import { COLORS } from "../constants/colors";
 import { useNavigate, Link } from "react-router-dom";
 import { registerUser } from "../API/api";
@@ -12,6 +13,8 @@ function Signup() {
   const { setUser } = useUserStore();
   const [showPasswordChecks, setShowPasswordChecks] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   // ✅ فحص الشروط
   const checks = {
@@ -36,21 +39,27 @@ function Signup() {
       const result = await registerUser(username, email, password);
       setUser(result);
 
-      message.success("🎉 Account created successfully! Redirecting to login...");
+      setSuccessMessage("Account added successfully!");
+      setErrorMessage(""); // Clear error on success
       form.resetFields();
-      setTimeout(() => navigate("/login"), 2000);
+      setTimeout(() => {
+        setSuccessMessage("");
+        navigate("/");
+      }, 2000);
     } catch (error: any) {
       console.error("❌ Error during signup:", error);
       const backendError = error.response?.data;
 
+      let errorMsg = "An error occurred during signup. Try again.";
       if (backendError) {
-        if (backendError.username) message.error(backendError.username[0]);
-        else if (backendError.email) message.error(backendError.email[0]);
-        else if (backendError.password) message.error(backendError.password[0]);
-        else message.error("An error occurred during signup. Try again.");
+        if (backendError.username) errorMsg = backendError.username[0];
+        else if (backendError.email) errorMsg = backendError.email[0];
+        else if (backendError.password) errorMsg = backendError.password[0];
       } else {
-        message.error("Server connection failed. Check your internet.");
+        errorMsg = "Server connection failed. Check your internet.";
       }
+      setErrorMessage(errorMsg);
+      setSuccessMessage("");
     }
   };
 
@@ -247,7 +256,7 @@ function Signup() {
                         return Promise.resolve();
                       }
                       return Promise.reject(
-                        new Error("Passwords do not match ⚠️")
+                        new Error("The entered passwords do not match ⚠️")
                       );
                     },
                   }),
@@ -279,10 +288,34 @@ function Signup() {
                   display: "flex",
                   justifyContent:"center",
                   fontSize: "14px",
+                  marginTop: "1rem",
                 }}
               >
                 <Link style={{color:"black"}} to="/login">Already have an account ? Login</Link>
               </div>
+
+              {successMessage && (
+                <Alert
+                  message={successMessage}
+                  type="success"
+                  showIcon
+                  closable
+                  onClose={() => setSuccessMessage("")}
+                  style={{ marginTop: "1rem" }}
+                />
+              )}
+
+              {errorMessage && (
+                <Alert
+                  message={errorMessage}
+                  type="error"
+                  showIcon
+                  icon={<CloseCircleOutlined />}
+                  closable
+                  onClose={() => setErrorMessage("")}
+                  style={{ marginTop: "1rem" }}
+                />
+              )}
             </Form>
           </div>
         </Col>

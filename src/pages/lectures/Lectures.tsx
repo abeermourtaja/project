@@ -18,6 +18,7 @@ import {
   DatePicker,
   Dropdown,
   Menu,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -48,17 +49,18 @@ function Lectures() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [fileObj, setFileObj] = useState<File | null>(null);
+  const [fileLink, setFileLink] = useState<string>("");
   const [editLecture, setEditLecture] = useState<any | null>(null);
-  const [editFileObj, setEditFileObj] = useState<File | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [viewFileUrl, setViewFileUrl] = useState<string>("");
+  const [paddingTop, setPaddingTop] = useState(200); // default padding top
+  const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      message.error("الرجاء تسجيل الدخول أولاً");
+      setAlert({ type: 'error', message: "Please log in first" });
       navigate("/login");
       return;
     }
@@ -74,10 +76,17 @@ function Lectures() {
         setFilteredLectures(lectureList);
       })
       .catch(() => {
-        message.error("فشل في تحميل المحاضرات 😢");
+        setAlert({ type: 'error', message: "Failed to load lectures 😢" });
       })
       .finally(() => setLoading(false));
   }, [navigate]);
+
+  useEffect(() => {
+    if (alert) {
+      const timer = setTimeout(() => setAlert(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [alert]);
 
   const getPreviewUrl = (url?: string) => {
     if (!url) return "";
@@ -113,46 +122,43 @@ function Lectures() {
   const handleCancel = () => {
     setIsModalVisible(false);
     form.resetFields();
-    setFileObj(null);
-  };
-  const handleUpload = (file: File) => {
-    setFileObj(file);
-    return false;
+    setFileLink("");
   };
 
   const handleOk = async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) return;
     if (userRole !== "teacher") {
-      message.warning("فقط المعلم يمكنه إضافة محاضرات!");
+      setAlert({ type: 'warning', message: "Only teachers can add lectures!" });
       return;
     }
     try {
       const values = await form.validateFields();
-      if (!fileObj) {
-        message.error("يرجى رفع ملف المحاضرة!");
-        return;
-      }
+
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const lectureData = {
         title: values.title,
         description: values.description,
         video: values.video,
-        file: fileObj,
-        date: values.date ? dayjs(values.date).format('DD/MM/YYYY') : new Date().toLocaleDateString("en-GB"),
+        file: values.fileLink,
+        created_at: values.date ? dayjs(values.date).format('DD/MM/YYYY') : new Date().toLocaleDateString("en-GB"),
         teacher_name: user.name || "Unknown Teacher",
       };
       const newLecture = await addLecture(token, lectureData);
-      message.success("✅ تمت إضافة المحاضرة بنجاح!");
+      setAlert({ type: 'success', message: "Lecture added successfully!" });
       const updated = [newLecture, ...lectures];
       setLectures(updated);
       setFilteredLectures(updated);
+      setPaddingTop((prev) => prev + 200);
+
+// Scroll to top so the lecture appears immediately
+window.scrollTo({ top: 0, behavior: "smooth" });
       setIsModalVisible(false);
       form.resetFields();
-      setFileObj(null);
+      setFileLink("");
     } catch (error: any) {
       console.error("❌ Error adding lecture:", error);
-      message.error("حدث خطأ أثناء رفع المحاضرة.");
+      setAlert({ type: 'error', message: "An error occurred while uploading the lecture." });
     }
   };
 
@@ -163,13 +169,9 @@ function Lectures() {
       title: lecture.title,
       description: lecture.description,
       video: lecture.video,
-      date: lecture.date ? dayjs(lecture.date, 'DD/MM/YYYY') : null
+      fileLink: lecture.file,
+      date: lecture.created_at ? dayjs(lecture.created_at, 'DD/MM/YYYY') : null
     });
-  };
-
-  const handleEditUpload = (file: File) => {
-    setEditFileObj(file);
-    return false;
   };
 
   const handleEditOk = async () => {
@@ -177,27 +179,22 @@ function Lectures() {
     if (!token || !editLecture) return;
     try {
       const values = await form.validateFields();
-      let data: any;
-      if (editFileObj) {
-        data = new FormData();
-        data.append("title", values.title);
-        data.append("description", values.description);
-        data.append("video", values.video);
-        data.append("file", editFileObj);
-      } else {
-        data = { title: values.title, description: values.description, video: values.video };
-      }
+      const data = {
+        title: values.title,
+        description: values.description,
+        video: values.video,
+        file_link: values.fileLink,
+      };
       const updated = await updateLecture(token, editLecture.id, data);
-      message.success("✅ تم تحديث المحاضرة بنجاح!");
+      setAlert({ type: 'success', message: "Lecture updated successfully!" });
       setLectures((prev) => prev.map((l) => (l.id === editLecture.id ? updated : l)));
       setFilteredLectures((prev) => prev.map((l) => (l.id === editLecture.id ? updated : l)));
       setIsEditModalVisible(false);
       setEditLecture(null);
-      setEditFileObj(null);
       form.resetFields();
     } catch (error: any) {
       console.error("❌ Error editing lecture:", error);
-      message.error("حدث خطأ أثناء تحديث المحاضرة.");
+      setAlert({ type: 'error', message: "An error occurred while updating the lecture." });
     }
   };
 
@@ -206,12 +203,15 @@ function Lectures() {
     if (!token) return;
     try {
       await deleteLecture(token, lectureId);
-      message.success("✅ تم حذف المحاضرة");
+      setAlert({ type: 'success', message: "Lecture deleted successfully!" });
       setLectures((prev) => prev.filter((l) => l.id !== lectureId));
       setFilteredLectures((prev) => prev.filter((l) => l.id !== lectureId));
+      setPaddingTop((prev) => Math.max(450, prev - 70));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      
     } catch (error: any) {
       console.error("❌ Error deleting lecture:", error);
-      message.error("حدث خطأ أثناء حذف المحاضرة.");
+      setAlert({ type: 'error', message: "An error occurred while deleting the lecture." });
     }
   };
 
@@ -227,19 +227,20 @@ function Lectures() {
     <Layout style={{ backgroundColor: COLORS.background, marginLeft: 220, width: "100%" }}>
       {/* Fixed Header */}
       {/* Fixed Header */}
-<div
-  style={{
-    position: "fixed",
-    top: 0,
-    left: 220,
-    right: 0,
-    zIndex: 100,
-    backgroundColor: COLORS.background,
-    padding: "20px 50px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 15,
-  }}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 220,
+          right: 0,
+          zIndex: 100,
+          backgroundColor: COLORS.background,
+          padding: "20px 50px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 15,
+          
+        }}
 >
   {/* Page Title Row */}
   <Row>
@@ -253,13 +254,13 @@ function Lectures() {
   {/* Row with Search, New Lecture Button, and Notification */}
   <Row align="middle" gutter={15}>
     {/* Search Bar */}
-    <Col flex="auto">
+    <Col >
       <Input
         prefix={<SearchOutlined />}
         placeholder="Search for your lectures"
         value={searchTerm}
         onChange={(e) => handleSearch(e.target.value)}
-        style={{ width: "100%", height: 40, backgroundColor: "#EDEDED", borderRadius: 10 }}
+        style={{ width: 800, height: 40, backgroundColor: "#EDEDED", borderRadius: 10 }}
       />
     </Col>
 
@@ -285,32 +286,35 @@ function Lectures() {
     )}
 
     {/* Notification */}
-    <Col>
-      <Badge count={1} size="small" style={{ backgroundColor: "#9AB7D0" }}>
-        <BellFilled
-          style={{ fontSize: 22, color: "#000", cursor: "pointer" }}
-          onClick={() => setOpen(true)}
-        />
-        <NotificationsDrawer open={open} onClose={() => setOpen(false)} />
-      </Badge>
-    </Col>
+      
+        <NotificationsDrawer open={open} onClose={() => setOpen(false)} setOpen={setOpen} />
+     
   </Row>
 </div>
 
       {/* Lectures Content */}
-<Content style={{ width: "100%", padding: "140px 50px 50px 50px" }}>
+<Content style={{ width: "100%", padding: "140px 50px 50px 50px" , paddingTop: `${paddingTop}px`, transition: 'padding-top 0.3s ease', ...(filteredLectures.length === 0 ? { display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 220px)' } : { display: 'flex', justifyContent: 'center' }) }}>
+        {/* Alert for errors */}
+        {alert && (
+          <Alert
+            message={alert.message}
+            type={alert.type}
+            showIcon
+            closable
+            onClose={() => setAlert(null)}
+            style={{ marginBottom: "20px" }}
+          />
+        )}
         {filteredLectures.length === 0 ? (
-          <div style={{ textAlign: "center", marginTop: 100 }}>
-            <Empty
-              description={
-                searchTerm
-                  ? "No lectures found matching your search."
-                  : userRole === "teacher"
-                  ? "No lectures yet! Add your first lecture."
-                  : "No lectures yet!"
-              }
-            />
-          </div>
+          <Empty
+            description={
+              searchTerm
+                ? "No lectures found matching your search."
+                : userRole === "teacher"
+                ? "No lectures yet! Add your first lecture."
+                : "No lectures yet!"
+            }
+          />
         ) : (
           <Space direction="horizontal" style={{ width: "100%" }} size="middle" wrap>
             {filteredLectures.map((lecture) => (
@@ -328,11 +332,11 @@ function Lectures() {
                       borderBottomLeftRadius: 14,
                     }}
                   />
-                  <Col style={{ marginRight: "480px" }}>
+                  <Col flex={"auto"} style={{ marginRight: "480px" }}>
                     <Title level={5} style={{ margin: 0, fontWeight: "bold" }}><b>Title: </b>{lecture.title}</Title>
                     <Text style={{ color: "#9AB7D0" }}><b>Description: </b>{lecture.description}</Text>
                     <br />
-                    <Text style={{ fontSize: 13 }}><b>Date:</b> {lecture.date}</Text>
+                    <Text style={{ fontSize: 13 }}><b>Date:</b> {dayjs(lecture.created_at).format('DD MMM YYYY')}</Text>
                     <br />
                     <Text style={{ fontSize: 13 }}><b>By:</b> {lecture.teacher_name}</Text>
                   </Col>
@@ -343,9 +347,9 @@ function Lectures() {
                           Watch Video
                         </Button>
                       )}
-                      {lecture.file ? (
-                        <Button type="link" href={lecture.file} target="_blank" style={{ color: "#000", fontWeight: 600 }}>
-                          Watch File
+                      {lecture.pdf ? (
+                        <Button type="link" href={lecture.pdf} target="_blank" style={{ color: "#000", fontWeight: 600 }}>
+                          View File
                         </Button>
                       ) : (
                         <Text style={{ fontSize: 13, color: "#9AB7D0" }}>File isn't attached</Text>
@@ -391,14 +395,11 @@ function Lectures() {
             <Form.Item label={<b>Lecture Description</b>} name="description" rules={[{ required: true, message: "Please enter description" }]}>
               <Input.TextArea rows={3} />
             </Form.Item>
-            <Form.Item label={<b>Lecture Video Link</b>} name="video" rules={[{ required: true, message: "Please enter video link" }]}>
+            <Form.Item label={<b>Lecture Video Link</b>} name="video" rules={[{ required: true, message: "Please enter video link" }, { type: 'url', message: 'Please enter a valid URL' }]}>
               <Input placeholder="Enter lecture video link" />
             </Form.Item>
-            <Form.Item label={<b>Lecture File</b>} name="file" rules={[{ required: true, message: "Please upload a file" }]}>
-              <Upload beforeUpload={handleUpload} accept=".pdf,.doc,.docx,.ppt,.pptx">
-                <Button icon={<UploadOutlined />}>Select File</Button>
-              </Upload>
-              {fileObj && <p style={{ marginTop: 8, color: "green" }}>✔ {fileObj.name} جاهز للرفع</p>}
+            <Form.Item label={<b>Lecture File Link</b>} name="fileLink" rules={[{ type: 'url', message: 'Please enter a valid URL' }]}>
+              <Input placeholder="Enter lecture file link (optional)" />
             </Form.Item>
             <div style={{ display: "flex", justifyContent: "end" }}>
               <Button type="primary" icon={<UploadOutlined />} onClick={handleOk} style={{ backgroundColor: "#B8CDE0", border: "none", color: "#000", borderRadius: 10, fontWeight: 600, width: 150, height: 45 }}>Upload</Button>
@@ -408,7 +409,7 @@ function Lectures() {
       </Modal>
 
       {/* Edit Lecture Modal */}
-      <Modal open={isEditModalVisible} footer={null} onCancel={() => { setIsEditModalVisible(false); setEditLecture(null); setEditFileObj(null); form.resetFields(); }} centered width={400} style={{ borderRadius: 12, overflow: "hidden" }}>
+      <Modal open={isEditModalVisible} footer={null} onCancel={() => { setIsEditModalVisible(false); setEditLecture(null); form.resetFields(); }} centered width={400} style={{ borderRadius: 12, overflow: "hidden" }}>
         <div style={{ backgroundColor: "#B8CDE0", padding: "10px 0", textAlign: "center", borderRadius: 10 }}>
           <Title level={4} style={{ margin: 0, fontSize: 20 }}>Edit Lecture</Title>
         </div>
@@ -420,14 +421,11 @@ function Lectures() {
             <Form.Item label={<b>Lecture Description</b>} name="description" rules={[{ required: true, message: "Please enter description" }]}>
               <Input.TextArea rows={3} />
             </Form.Item>
-            <Form.Item label={<b>Lecture Video Link</b>} name="video" rules={[{ required: true, message: "Please enter video link" }]}>
+            <Form.Item label={<b>Lecture Video Link</b>} name="video" rules={[{ required: true, message: "Please enter video link" }, { type: 'url', message: 'Please enter a valid URL' }]}>
               <Input placeholder="Enter lecture video link" />
             </Form.Item>
-            <Form.Item label={<b>Lecture File</b>} name="file">
-              <Upload beforeUpload={handleEditUpload} accept=".pdf,.doc,.docx,.ppt,.pptx">
-                <Button icon={<UploadOutlined />}>Select File</Button>
-              </Upload>
-              {editFileObj && <p style={{ marginTop: 8, color: "green" }}>✔ {editFileObj.name} جاهز للرفع</p>}
+            <Form.Item label={<b>Lecture File Link</b>} name="fileLink" rules={[{ type: 'url', message: 'Please enter a valid URL' }]}>
+              <Input placeholder="Enter lecture file link (optional)" />
             </Form.Item>
             <div style={{ display: "flex", justifyContent: "end" }}>
               <Button type="primary" icon={<UploadOutlined />} onClick={handleEditOk} style={{ backgroundColor: "#B8CDE0", border: "none", color: "#000", borderRadius: 10, fontWeight: 600, width: 150, height: 45 }}>Save</Button>

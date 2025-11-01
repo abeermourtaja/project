@@ -114,13 +114,15 @@ function RootLayout() {
           >
             Assignments
           </Menu.Item>
-          <Menu.Item
-            key="submissions"
-            icon={<FileDoneOutlined  />}
-            onClick={() => navigate("/submissions")}
-          >
-            Submissions
-          </Menu.Item>
+          {user?.role === "teacher" && (
+            <Menu.Item
+              key="submissions"
+              icon={<FileDoneOutlined  />}
+              onClick={() => navigate("/submissions")}
+            >
+              Submissions
+            </Menu.Item>
+          )}
           <Menu.Item
             key="settings"
             icon={<SettingOutlined />}

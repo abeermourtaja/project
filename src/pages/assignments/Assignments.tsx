@@ -1,13 +1,28 @@
 import { useState, useEffect } from "react";
-import { Card, Row, Col, Input, Button, Typography, Space, Form, Badge, Layout, message, Spin, Modal, DatePicker } from "antd";
-import { SearchOutlined, FilePdfOutlined, BellFilled, PlusOutlined } from "@ant-design/icons";
-import { Content } from "antd/es/layout/layout";
+import {
+  Card,
+  Row,
+  Col,
+  Input,
+  Button,
+  Typography,
+  Space,
+  Layout,
+  message,
+  Spin,
+} from "antd";
+import {
+  SearchOutlined,
+  FilePdfOutlined,
+  PlusOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
 import { COLORS } from "../../constants/colors";
+import { Content } from "antd/es/layout/layout";
 import { useNavigate } from "react-router-dom";
-import UploadAssignmentModal from "./UploadAssignmentModal";
-import NotificationsDrawer from "../Notifications";
 import AddSubmissionModal from "./AddSubmissionModal";
-import { addAssignment, getAssignments, getSubmissionsForAssignment, updateAssignment, deleteAssignment } from "../../API/api";
+import { getAssignments, getSubmissions } from "../../API/api";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
@@ -18,44 +33,17 @@ function Assignments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
-  const [form] = Form.useForm();
-  const [userGrades, setUserGrades] = useState<Record<number, number | null>>({});
-  const [editingAssignment, setEditingAssignment] = useState<any | null>(null);
-  const [isEditAssignmentVisible, setIsEditAssignmentVisible] = useState(false);
-  const [editFileObj, setEditFileObj] = useState<File | null>(null);
+  const [submissionStatus, setSubmissionStatus] = useState<
+    Record<number, { has_submitted: boolean; file?: string | null }>
+  >({});
 
-  const handleSaveEditAssignment = async () => {
-    if (!editingAssignment) return;
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
-    try {
-      const values = await form.validateFields();
-      const payload: any = {
-        title: values.title,
-        description: values.description,
-        due_date: values.dueDate ? values.dueDate.toISOString().split("T")[0] : editingAssignment.due_date,
-      };
-      const updated = await updateAssignment(token, editingAssignment.id, payload);
-      setAssignments((prev) => prev.map((a) => (a.id === editingAssignment.id ? updated : a)));
-      setFilteredAssignments((prev) => prev.map((a) => (a.id === editingAssignment.id ? updated : a)));
-      message.success("✅ تم تحديث الواجب");
-      setIsEditAssignmentVisible(false);
-      setEditingAssignment(null);
-      form.resetFields();
-    } catch (e) {
-      console.error(e);
-      message.error("فشل في تحديث الواجب");
-    }
-  };
-
-  // ✅ Fetch assignments on mount
+  // ✅ Fetch Assignments + Submission Status
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      message.error("الرجاء تسجيل الدخول أولاً");
+      message.error("Please log in first.");
       navigate("/login");
       return;
     }
@@ -66,99 +54,80 @@ function Assignments() {
       setUserRole(user.role);
     }
 
-    getAssignments(token)
-      .then((data) => {
-        const assignmentList = Array.isArray(data) ? data : data.results || [];
-        setAssignments(assignmentList);
-        setFilteredAssignments(assignmentList);
+    const loadData = async () => {
+      try {
+        const [assignmentsData, submissionsData] = await Promise.all([
+          getAssignments(token),
+          getSubmissions(token),
+        ]);
 
-        // fetch current user's submission for each assignment to show "Your grade"
-        try {
-          const userData = localStorage.getItem("user");
-          const user = userData ? JSON.parse(userData) : null;
-          if (user && user.id) {
-            Promise.all(
-              assignmentList.map(async (a: any) => {
-                try {
-                  const subs = await getSubmissionsForAssignment(token, a.id);
-                  const list = Array.isArray(subs) ? subs : subs.results || [];
-                  const mine = list.find((s: any) => s.user?.id === user.id || s.student_id === user.id);
-                  return { assignmentId: a.id, grade: mine?.grade ?? null };
-                } catch (e) {
-                  return { assignmentId: a.id, grade: null };
-                }
-              })
-            ).then((results) => {
-              const map: Record<number, number | null> = {};
-              results.forEach((r) => (map[r.assignmentId] = r.grade));
-              setUserGrades(map);
-            });
-          }
-        } catch (e) {
-          console.error("Error fetching user grades:", e);
-        }
-      })
-      .catch(() => message.error("فشل في تحميل الواجبات 😢"))
-      .finally(() => setLoading(false));
+        const assignmentList = Array.isArray(assignmentsData) ? assignmentsData : assignmentsData.results || [];
+        const submissionList = Array.isArray(submissionsData) ? submissionsData : submissionsData.results || [];
+
+        // Get current user ID
+        const userData = localStorage.getItem("user");
+        const userId = userData ? JSON.parse(userData).id : null;
+
+        // Map submissions to assignments for the current user
+        const assignmentsWithSubmissions = assignmentList.map((assignment: any) => {
+          const userSubmission = submissionList.find(
+            (sub: any) => sub.assignment?.id === assignment.id && sub.student?.id === userId
+          );
+
+          return {
+            ...assignment,
+            has_submitted: !!userSubmission,
+            file_url: userSubmission?.file_url || userSubmission?.file?.url || null,
+            grade: userSubmission?.grade || null,
+          };
+        });
+
+        setAssignments(assignmentsWithSubmissions);
+        setFilteredAssignments(assignmentsWithSubmissions);
+      } catch (err) {
+        message.error("Failed to load assignments");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [navigate]);
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
+  // ✅ Search Function
+  useEffect(() => {
     const filtered = assignments.filter(
       (item) =>
-        item.title.toLowerCase().includes(value.toLowerCase()) ||
-        item.description.toLowerCase().includes(value.toLowerCase())
+        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredAssignments(filtered);
+  }, [assignments, searchTerm]);
+
+  // ✅ Update status after submission
+  const handleSubmissionSuccess = (assignmentId: number, fileUrl: string) => {
+    setSubmissionStatus((prev) => ({
+      ...prev,
+      [assignmentId]: { has_submitted: true, file: fileUrl },
+    }));
   };
 
-  // Modal handlers
-  const showModal = () => setIsModalVisible(true);
-  const handleCancel = () => {
-    setIsModalVisible(false);
-    form.resetFields();
-  };
-
-  const handleOk = async (fileObj: File) => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) {
-      message.error("الرجاء تسجيل الدخول أولاً");
-      return;
-    }
-
-    if (userRole !== "teacher") {
-      message.warning("فقط المعلم يمكنه إضافة الواجبات!");
-      return;
-    }
-
+  // Convert various Google Drive sharing links to a previewable URL.
+  const getPreviewUrl = (url?: string) => {
+    if (!url) return "";
     try {
-      const values = await form.validateFields();
-      if (!fileObj) {
-        message.error("يرجى رفع ملف الواجب!");
-        return;
-      }
+      // Match /d/FILE_ID/ style
+      const dMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (dMatch && dMatch[1]) return `https://drive.google.com/file/d/${dMatch[1]}/preview`;
 
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      // Match ?id=FILE_ID style
+      const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idMatch && idMatch[1]) return `https://drive.google.com/file/d/${idMatch[1]}/preview`;
 
-      const assignmentData = {
-        title: values.title,
-        description: values.description,
-        file: fileObj,
-        due_date: values.dueDate.toISOString().split("T")[0], // YYYY-MM-DD
-        lecture: values.lecture, // id of the lecture
-        created_by: user.id,
-      };
-
-      const newAssignment = await addAssignment(token, assignmentData);
-      message.success("✅ تم إضافة الواجب بنجاح!");
-      const updated = [newAssignment, ...assignments];
-      setAssignments(updated);
-      setFilteredAssignments(updated);
-      setIsModalVisible(false);
-      form.resetFields();
-    } catch (error: any) {
-      console.error("❌ Error adding assignment:", error);
-      message.error("حدث خطأ أثناء إضافة الواجب.");
+      // If it's already a preview/download link or any other URL, return as-is
+      return url;
+    } catch (e) {
+      return url;
     }
   };
 
@@ -171,139 +140,162 @@ function Assignments() {
   }
 
   return (
-    <Layout style={{ backgroundColor: COLORS.background, marginLeft: 220, padding: 30, width: "100%", paddingTop: 200 }}>
-      <Content style={{ width: "100%" }}>
-        <div style={{ padding: "30px 50px" }}>
-          <Title level={3} style={{ color: "#21629B", marginBottom: 20, fontWeight: 700 }}>
-            Assignments
-          </Title>
+    <Layout
+      style={{
+        backgroundColor: COLORS.background,
+        marginLeft: 220,
+        width: "100%",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 220,
+          right: 0,
+          zIndex: 100,
+          backgroundColor: COLORS.background,
+          padding: "20px 50px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+        }}
+      >
+        <Row>
+          <Col>
+            <Title level={3} style={{ color: "#21629B", fontWeight: 700, margin: 0 }}>
+              Assignments
+            </Title>
+          </Col>
+        </Row>
 
-          <Row align="middle" justify="space-between" style={{ marginBottom: 25, width: "1000px" }}>
+        <Row align="middle" gutter={15}>
+          <Col>
             <Input
               prefix={<SearchOutlined />}
               placeholder="Search for your Assignments"
               value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: "78%", height: 40, backgroundColor: "#EDEDED", borderRadius: 10 }}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: 800,
+                height: 40,
+                backgroundColor: "#EDEDED",
+                borderRadius: 10,
+              }}
             />
-            <Space>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={showModal}
-                style={{ backgroundColor: "#EDEDED", color: "#000", border: "none", height: 40, borderRadius: 10, fontWeight: 600 }}
-              >
-                New Assignment
-              </Button>
-            </Space>
-          </Row>
+          </Col>
+        </Row>
+      </div>
 
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            {filteredAssignments.map((item) => (
-              <Card key={item.id} style={{ borderRadius: 10, backgroundColor: "#F5F5F5", position: "relative" }} bodyStyle={{ padding: 20 }}>
-                <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 10, background: "#81B1E7", borderTopLeftRadius: 10, borderBottomLeftRadius: 10 }} />
+      {/* Content */}
+      <Content
+        style={{
+          width: "100%",
+          padding: "140px 50px 50px 50px",
+          transition: "padding-top 0.3s ease",
+        }}
+      >
+        <Space direction="vertical" style={{ width: 1000 }} size="middle">
+          {filteredAssignments.map((item) => {
+            const hasSubmitted = item?.has_submitted;
+            const fileUrl = item?.file_url;
+            const grade = item?.grade;
+            return (
+              <Card
+                key={item.id}
+                style={{
+                  borderRadius: 10,
+                  backgroundColor: "#F5F5F5",
+                  position: "relative",
+                }}
+                bodyStyle={{ padding: 20 }}
+              >
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 10,
+                    background: "#81B1E7",
+                    borderTopLeftRadius: 10,
+                    borderBottomLeftRadius: 10,
+                  }}
+                />
                 <Row justify="space-between" align="middle">
                   <Col flex="auto">
-                    <Title level={5} style={{ margin: 0, fontWeight: "bold" }}>{item.title}</Title>
-                    <Text style={{ color: "#9AB7D0" }}><FilePdfOutlined /> {item.lecture || "Lecture"}</Text>
+                    <Title level={5} style={{ margin: 0, fontWeight: "bold" }}>
+                      <b>Assignment Title:</b> {item.title}
+                    </Title>
+                    <Text style={{ color: "#9AB7D0" }}>
+                      <FilePdfOutlined /> <b>Lecture Title:</b> {item.lecture_title || "Lecture"}
+                    </Text>
                     <br />
-                    <Text style={{ fontSize: 13 }}><b>Due Date:</b> {item.due_date}</Text>
+                    <Text><b>Description:</b> {item.description}</Text>
+                    <Text style={{ fontSize: 13 }}>
+                      <b>Due Date:</b> {dayjs(item.due_date).format("DD MMM YYYY")}
+                    </Text>
+                    <br />
+                    { grade!==null && (
+                      <Text style={{ fontSize: 13 }}>
+                        <b>Grade:</b> {grade ?? "Not graded"} 
+                      </Text>
+                    )}
                   </Col>
                   <Col>
                     <Space direction="vertical">
-                      <Button
-                        icon={<PlusOutlined />}
-                        style={{ backgroundColor: "#81B1E7", border: "none", borderRadius: 10, color: "#000", fontWeight: 600, height: 40, width: 150 }}
-                        onClick={() => {
-                          setSelectedAssignment(item);
-                          setIsAddModalVisible(true);
-                        }}
-                      >
-                        Add Submission
-                      </Button>
-                      {userRole === "teacher" && (
-                        <Space>
-                          <Button
-                            onClick={() => {
-                              setEditingAssignment(item);
-                              form.setFieldsValue({ title: item.title, description: item.description });
-                              setIsEditAssignmentVisible(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            danger
-                            onClick={() => {
-                              Modal.confirm({
-                                title: "Confirm delete",
-                                content: "Are you sure you want to delete this assignment?",
-                                onOk: async () => {
-                                  const token = localStorage.getItem("accessToken");
-                                  if (!token) return;
-                                  try {
-                                    await deleteAssignment(token, item.id);
-                                    message.success("✅ تم حذف الواجب");
-                                    setAssignments((prev) => prev.filter((a) => a.id !== item.id));
-                                    setFilteredAssignments((prev) => prev.filter((a) => a.id !== item.id));
-                                  } catch (e) {
-                                    console.error(e);
-                                    message.error("فشل في حذف الواجب");
-                                  }
-                                },
-                              });
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Space>
+                      {userRole === "student" && (
+                        <>
+                          {hasSubmitted ? (
+                            <Button
+                              type="default"
+                              onClick={() => window.open(getPreviewUrl(fileUrl), "_blank", "noopener,noreferrer")}
+                              style={{ borderRadius: 8 }}
+                            >
+                              View File
+                            </Button>
+                          ) : (
+                            <Button
+                              icon={<PlusOutlined />}
+                              style={{
+                                backgroundColor: "#81B1E7",
+                                border: "none",
+                                borderRadius: 10,
+                                color: "#000",
+                                fontWeight: 600,
+                                height: 40,
+                                width: 150,
+                              }}
+                              onClick={() => {
+                                setSelectedAssignment(item);
+                                setIsAddModalVisible(true);
+                              }}
+                            >
+                              Add Submission
+                            </Button>
+                          )}
+                        </>
                       )}
                     </Space>
                   </Col>
                 </Row>
               </Card>
-            ))}
-          </Space>
+            );
+          })}
+        </Space>
 
-          <UploadAssignmentModal
-            isModalVisible={isModalVisible}
-            handleCancel={handleCancel}
-            setAssignments={setAssignments}
-          />
-
-          {selectedAssignment && (
-            <AddSubmissionModal
-              visible={isAddModalVisible}
-              onCancel={() => setIsAddModalVisible(false)}
-              onSubmit={() => setIsAddModalVisible(false)}
-              assignment={selectedAssignment}
-            />
-          )}
-
-          {/* Edit Assignment Modal */}
-          <Modal
-            open={isEditAssignmentVisible}
-            title={editingAssignment ? `Edit Assignment — ${editingAssignment.title}` : "Edit Assignment"}
-            onCancel={() => {
-              setIsEditAssignmentVisible(false);
-              setEditingAssignment(null);
-              form.resetFields();
+        {selectedAssignment && (
+          <AddSubmissionModal
+            visible={isAddModalVisible}
+            onCancel={() => setIsAddModalVisible(false)}
+            onSubmit={(fileUrl: string) => {
+              handleSubmissionSuccess(selectedAssignment.id, fileUrl);
+              setIsAddModalVisible(false);
             }}
-            onOk={handleSaveEditAssignment}
-          >
-            <Form form={form} layout="vertical">
-              <Form.Item label="Title" name="title" rules={[{ required: true }]}> 
-                <Input />
-              </Form.Item>
-              <Form.Item label="Description" name="description" rules={[{ required: true }]}> 
-                <Input.TextArea rows={3} />
-              </Form.Item>
-              <Form.Item label="Due Date" name="dueDate">
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Form>
-          </Modal>
-        </div>
+            assignment={selectedAssignment}
+          />
+        )}
       </Content>
     </Layout>
   );

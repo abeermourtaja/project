@@ -3,7 +3,7 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getUserProfile, updateUserProfile, deleteUserAccount } from "../../API/api";
+import { getUserProfile, updateUserProfile } from "../../API/api";
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -24,11 +24,12 @@ function AccountInformation() {
     }
     getUserProfile(token)
       .then((data) => {
+        console.log("Fetched user profile:", data);
         setUserData(data);
         form.setFieldsValue({
           name: data.name || "",
           email: data.email || "",
-          phone: data.phone || "",
+          phone_number: data.phone_number || "",
         });
       })
       .catch(() => {
@@ -50,19 +51,7 @@ function AccountInformation() {
     }
   };
 
-  const handleDelete = async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
-    try {
-      await deleteUserAccount(token);
-      message.success("✅ تم حذف الحساب بنجاح!");
-      localStorage.clear();
-      navigate("/login");
-    } catch (error: any) {
-      console.error("❌ Error deleting account:", error);
-      message.error("حدث خطأ أثناء حذف الحساب.");
-    }
-  };
+
 
   if (loading) {
     return (
@@ -144,7 +133,7 @@ function AccountInformation() {
               />
             </Form.Item>
 
-            <Form.Item label="Phone Number" name="phone">
+            <Form.Item label="Phone Number" name="phone_number">
               <Input
                 style={{
                   height: 45,
@@ -171,38 +160,12 @@ function AccountInformation() {
               >
                 Update
               </Button>
-
-              <Button
-                block
-                onClick={() => setDeleteModalVisible(true)}
-                style={{
-                  height: 45,
-                  borderRadius: 6,
-                  backgroundColor: "#fff",
-                  border: "1px solid #9AB7D0",
-                  color: "#21629B",
-                  fontWeight: 500,
-                }}
-              >
-                Delete My Account
-              </Button>
             </Space>
           </Form>
         </div>
       </Content>
 
-      {/* Delete Account Confirmation Modal */}
-      <Modal
-        title="Confirm Account Deletion"
-        open={deleteModalVisible}
-        onOk={handleDelete}
-        onCancel={() => setDeleteModalVisible(false)}
-        okText="Delete"
-        cancelText="Cancel"
-        okButtonProps={{ danger: true }}
-      >
-        <p>Are you sure you want to delete your account? This action cannot be undone.</p>
-      </Modal>
+      
     </Layout>
   );
 }

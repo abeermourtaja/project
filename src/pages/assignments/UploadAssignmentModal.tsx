@@ -4,15 +4,13 @@ import {
   Form,
   Input,
   Button,
-  Upload,
   DatePicker,
   Select,
   Typography,
   message,
 } from "antd";
-import { UploadOutlined, FileAddOutlined } from "@ant-design/icons";
+import { UploadOutlined } from "@ant-design/icons";
 import React, { useState, useEffect } from "react";
-import type { UploadFile } from "antd/es/upload/interface";
 import { getLectures, addAssignment } from "../../API/api";
 import dayjs from "dayjs";
 
@@ -31,7 +29,6 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({
   setAssignments,
 }) => {
   const [form] = Form.useForm();
-  const [fileObj, setFileObj] = useState<File | null>(null);
   const [lectures, setLectures] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loadingLectures, setLoadingLectures] = useState(true);
@@ -56,11 +53,6 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({
       .finally(() => setLoadingLectures(false));
   }, []);
 
-  // ✅ التعامل مع رفع الملف
-  const handleFileChange = ({ fileList }: { fileList: UploadFile[] }) => {
-    setFileObj(fileList[0]?.originFileObj || null);
-  };
-
 // ✅ عند الضغط على "Upload"
 const handleOk = async () => {
   const token = localStorage.getItem("accessToken"); // أو من authStore إذا موجود
@@ -77,8 +69,8 @@ const handleOk = async () => {
   try {
     const values = await form.validateFields();
 
-    if (!fileObj) {
-      message.error("يرجى رفع ملف الواجب!");
+    if (!values.link) {
+      message.error("يرجى إدخال رابط!");
       return;
     }
 
@@ -89,7 +81,7 @@ const handleOk = async () => {
       description: values.description,
       due_date: dayjs(values.dueDate).format("YYYY-MM-DD"), // الصيغة الصحيحة
       lecture: values.lecture, // رقم lecture id
-      file: fileObj,
+      file: values.link,
       created_by: user.id,
     };
 
@@ -184,25 +176,16 @@ const handleOk = async () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label={<b>Attach File</b>} name="file">
-            <Upload
-              beforeUpload={() => false}
-              onChange={handleFileChange}
-              maxCount={1}
-              accept=".pdf,.doc,.docx,.zip,.txt"
-            >
-              <Button
-                icon={<FileAddOutlined />}
-                style={{
-                  borderRadius: 10,
-                  width: "100%",
-                  height: 50,
-                  fontWeight: 600,
-                }}
-              >
-                Add File
-              </Button>
-            </Upload>
+          <Form.Item
+            label={<b>Enter Link</b>}
+            name="link"
+            rules={[{ required: true, message: "Please enter a link" }]}
+          >
+            <Input
+              placeholder="Enter a link (e.g., Google Drive, etc.)"
+              size="large"
+              style={{ borderRadius: 10 }}
+            />
           </Form.Item>
 
           <Button

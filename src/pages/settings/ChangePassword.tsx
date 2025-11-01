@@ -1,7 +1,9 @@
-import { Layout, Typography, Input, Button, Form, Row } from "antd";
+import { Layout, Typography, Input, Button, Form, Row, message } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
+import { changePassword } from "../../API/api";
+import { useTranslation } from "react-i18next";
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -9,9 +11,25 @@ const { Title } = Typography;
 function ChangePassword() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  const handleSubmit = (values: any) => {
-    console.log("Password changed:", values);
+  const handleSubmit = async (values: any) => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      message.error(t("Please log in first"));
+      return;
+    }
+
+    try {
+      await changePassword(token, values.currentPassword, values.newPassword);
+      message.success(t("Password changed successfully!"));
+      form.resetFields();
+      navigate("/settings");
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      const errorMessage = error.response?.data?.detail || t("An error occurred while changing the password");
+      message.error(errorMessage);
+    }
   };
 
   return (
@@ -55,7 +73,7 @@ function ChangePassword() {
                 marginBottom: 25,
               }}
             >
-              Change Password
+              {t("Change Password")}
             </Title>
           </Row>
 
@@ -67,9 +85,9 @@ function ChangePassword() {
             requiredMark={false}
           >
             <Form.Item
-              label="Current password"
+              label={t("Current password")}
               name="currentPassword"
-              rules={[{ required: true, message: "Please enter your current password" }]}
+              rules={[{ required: true, message: t("Please enter your current password") }]}
             >
               <Input.Password
                 placeholder="current Password"
@@ -83,9 +101,9 @@ function ChangePassword() {
             </Form.Item>
 
             <Form.Item
-              label="New password"
+              label={t("New password")}
               name="newPassword"
-              rules={[{ required: true, message: "Please enter your new password" }]}
+              rules={[{ required: true, message: t("Please enter your new password") }]}
             >
               <Input.Password
                 placeholder="New Password"
@@ -99,17 +117,17 @@ function ChangePassword() {
             </Form.Item>
 
             <Form.Item
-              label="Confirm Password"
+              label={t("Confirm Password")}
               name="confirmPassword"
               dependencies={["newPassword"]}
               rules={[
-                { required: true, message: "Please confirm your password" },
+                { required: true, message: t("Please confirm your password") },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
                     if (!value || getFieldValue("newPassword") === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error("Passwords do not match!"));
+                    return Promise.reject(new Error(t("Passwords do not match!")));
                   },
                 }),
               ]}
@@ -139,7 +157,7 @@ function ChangePassword() {
                 marginTop: 10,
               }}
             >
-              Confirm
+              {t("Confirm")}
             </Button>
           </Form>
         </div>

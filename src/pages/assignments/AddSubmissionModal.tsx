@@ -1,13 +1,12 @@
 import {
   Modal,
   Form,
-  Upload,
+  Input,
   Button,
   Typography,
   message,
   Spin,
 } from "antd";
-import { FileAddOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { addSubmission } from "../../API/api";
 
@@ -25,36 +24,32 @@ const AddSubmissionModal: React.FC<AddSubmissionModalProps> = ({
   onSubmit,
   assignment,
 }) => {
-  const [fileObj, setFileObj] = useState<File | null>(null);
+  const [form] = Form.useForm();
   const [uploading, setUploading] = useState(false);
-
-  const handleFileChange = ({ fileList }: any) => {
-    setFileObj(fileList[0]?.originFileObj || null);
-  };
-
+  const [paddingTop, setPaddingTop] = useState(450); // default padding top
 
   const handleOk = async () => {
     if (!assignment) {
       message.error("يرجى اختيار الواجب أولاً!");
       return;
     }
-    if (!fileObj) {
-      message.error("يرجى رفع الملف أولاً!");
-      return;
-    }
 
     try {
+      const values = await form.validateFields();
+
+      if (!values.link) {
+        message.error("يرجى إدخال رابط!");
+        return;
+      }
+
       setUploading(true);
       const token = localStorage.getItem("accessToken");
       if (!token) throw new Error("Token not found");
 
-      // 1️⃣ Upload file to backend
-      // const fileUrl = await uploadFile(fileObj);
-
       // 2️⃣ Prepare submission payload
       const submissionData = {
         assignment: assignment.id,
-        file_url: "https://example.com/file.pdf",
+        file_url: values.link,
         grade: null,
       };
 
@@ -63,6 +58,11 @@ const AddSubmissionModal: React.FC<AddSubmissionModalProps> = ({
 
       message.success("✅ تم إضافة التسليم بنجاح!");
       onSubmit(newSubmission);
+      setPaddingTop((prev) => prev + 70);
+
+// Scroll to top so the lecture appears immediately
+    window.scrollTo({ top: 0, behavior: "smooth" });
+      form.resetFields();
       onCancel();
     } catch (err) {
       console.error(err);
@@ -86,21 +86,17 @@ const AddSubmissionModal: React.FC<AddSubmissionModalProps> = ({
       {uploading ? (
         <Spin size="large" style={{ display: "block", margin: "50px auto" }} />
       ) : (
-        <Form layout="vertical">
-          <Form.Item label={<b>Attach File</b>} name="file">
-            <Upload
-              beforeUpload={() => false} // Prevent auto upload
-              onChange={handleFileChange}
-              maxCount={1}
-              accept=".pdf,.doc,.docx,.zip,.txt"
-            >
-              <Button
-                icon={<FileAddOutlined />}
-                style={{ borderRadius: 10, width: "100%", height: 50, fontWeight: 600 }}
-              >
-                Select File
-              </Button>
-            </Upload>
+        <Form form={form} layout="vertical">
+          <Form.Item
+            label={<b>Enter Link</b>}
+            name="link"
+            rules={[{ required: true, message: "Please enter a link" }]}
+          >
+            <Input
+              placeholder="Enter a link (e.g., Google Drive, etc.)"
+              size="large"
+              style={{ borderRadius: 10 }}
+            />
           </Form.Item>
         </Form>
       )}

@@ -11,6 +11,7 @@ import AccountInformation from "./pages/settings/AccountInformation";
 import ChangePassword from "./pages/settings/ChangePassword";
 import Language from "./pages/settings/Language";
 import Submissions from "./pages/Submissions";
+import "./i18n"; // Initialize i18n
 
 function App() {
   return (

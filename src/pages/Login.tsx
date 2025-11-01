@@ -2,10 +2,11 @@ import { Row, Col, Form, Input, Button, Divider, message } from "antd";
 import SignupImage from "../assets/signup.png";
 import { FaFacebook } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+
 import { useAuthStore } from "../store/useAuthStore";
 import { useState } from "react";
 import { COLORS } from "../constants/colors";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // ✅ استيراد الدوال الجاهزة من ملف الـ API
 import { loginUser, getUserProfile } from "../API/api";
@@ -13,6 +14,7 @@ import { loginUser, getUserProfile } from "../API/api";
 function Login() {
   const login = useAuthStore((state) => state.login);
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   // ✅ دالة تسجيل الدخول
@@ -40,6 +42,8 @@ function Login() {
 
       message.success("✅ Logged in successfully!");
 
+
+
       // ✅ التوجيه حسب الدور
       if (user.role === "student") {
         navigate("/home");
@@ -51,7 +55,7 @@ function Login() {
       }
     } catch (error: any) {
       console.error("❌ Error during login:", error);
-      message.error(error.response?.data?.detail || "Login failed. Please try again.");
+      message.error(error.response?.data?.detail || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -127,6 +131,8 @@ function Login() {
               Login
             </h2>
 
+
+
             <Form layout="vertical" onFinish={onFinish}>
               <Form.Item
                 label="Email"
@@ -173,25 +179,13 @@ function Login() {
                 </div>
               </Form.Item>
             </Form>
-
-            <Divider>Or</Divider>
-
-            <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
-              <Button
-                icon={<FcGoogle size={20} />}
-                shape="circle"
-                style={{ fontSize: "20px", padding: "8px" }}
-              />
-              <Button
-                icon={<FaFacebook size={20} color="white" />}
-                shape="circle"
-                style={{
-                  backgroundColor: "#3b5998",
-                  borderColor: "#3b5998",
-                  padding: "8px",
-                }}
-              />
+            <div style={{alignContent:"center", marginTop: "1rem"}}>
+              <Link style={{color:"black"}} to="/signup">Don't have an account ? Signup</Link>
             </div>
+
+
+            
+           
           </div>
         </Col>
       </Row>
