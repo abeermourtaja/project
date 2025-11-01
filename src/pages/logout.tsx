@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import { Modal, Button, Typography } from "antd";
 
 const { Text } = Typography;
@@ -15,7 +16,7 @@ function LogoutModal({ visible, onCancel, onConfirm }: LogoutModalProps) {
       centered
       footer={null}
       closable={false}
-      width={550}
+      width={400}
       bodyStyle={{
         textAlign: "center",
         padding: "30px 20px",
@@ -25,10 +26,9 @@ function LogoutModal({ visible, onCancel, onConfirm }: LogoutModalProps) {
       <h2 style={{ fontWeight: "bold", marginBottom: 15 }}>
         Are you sure you want to logout?
       </h2>
-      <Text type="secondary" style={{ fontSize: 15 }}>
-        You are about to be logged out of your account. <br />
-        Do you want to proceed?
-      </Text>
+      <p style={{ fontSize: 15, color: "#666", marginBottom: 0 }}>
+        You are about to be logged out of your account. This will end your current session. Do you want to proceed?
+      </p>
 
       <div style={{ marginTop: 30, display: "flex", justifyContent: "center", gap: 10 }}>
         <Button
@@ -61,4 +61,5 @@ function LogoutModal({ visible, onCancel, onConfirm }: LogoutModalProps) {
     </Modal>
   );
 }
+
 export default LogoutModal;

@@ -9,4 +9,7 @@ export const ENDPOINTS = {
   lectures: `${API_BASE_URL}/lectures/`,
   assignments: `${API_BASE_URL}/assignments/`,
   changePassword: `${API_BASE_URL}/users/change_password/`,
+  submissions: `${API_BASE_URL}/submissions/`,
+  deleteUser: `${API_BASE_URL}/users/me/`,
+
 };

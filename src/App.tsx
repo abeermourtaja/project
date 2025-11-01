@@ -10,6 +10,7 @@ import Settings from "./pages/settings/Settings";
 import AccountInformation from "./pages/settings/AccountInformation";
 import ChangePassword from "./pages/settings/ChangePassword";
 import Language from "./pages/settings/Language";
+import Submissions from "./pages/Submissions";
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/assignments" element={<Assignments />} />
           <Route path="/lectures" element={<Lectures />} />
+          <Route path="/submissions" element={<Submissions />} />
           <Route path="/settings">
             <Route index element={<Settings />} />  {/* /settings */}
             <Route path="account-information" element={<AccountInformation />} />

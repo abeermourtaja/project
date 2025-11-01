@@ -1,34 +1,110 @@
-import { Modal, Form, Input, Button, Upload, DatePicker, Typography } from "antd";
+// 📁 src/components/UploadAssignmentModal.tsx
+import {
+  Modal,
+  Form,
+  Input,
+  Button,
+  Upload,
+  DatePicker,
+  Select,
+  Typography,
+  message,
+} from "antd";
 import { UploadOutlined, FileAddOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
+import { getLectures, addAssignment } from "../../API/api";
+import dayjs from "dayjs";
 
 const { Title } = Typography;
+const { Option } = Select;
 
 interface UploadAssignmentModalProps {
   isModalVisible: boolean;
-  handleOk: () => void;
   handleCancel: () => void;
+  setAssignments: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
-const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVisible, handleOk, handleCancel }) => {
+const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({
+  isModalVisible,
+  handleCancel,
+  setAssignments,
+}) => {
   const [form] = Form.useForm();
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [fileObj, setFileObj] = useState<File | null>(null);
+  const [lectures, setLectures] = useState<any[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [loadingLectures, setLoadingLectures] = useState(true);
 
-  const handleFileChange = ({ fileList }: { fileList: UploadFile[] }) => setFileList(fileList);
+  // ✅ جلب المحاضرات + التحقق من دور المستخدم
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
 
-  const handleSubmit = () => {
-    form.validateFields().then(values => {
-      console.log({
-        ...values,
-        file: fileList[0],
-      });
-      form.resetFields();
-      setFileList([]);
-      handleOk();
-    });
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      setUserRole(user.role);
+    }
+
+    getLectures(token)
+      .then((data) => {
+        const lectureList = Array.isArray(data) ? data : data.results || [];
+        setLectures(lectureList);
+      })
+      .catch(() => message.error("فشل في تحميل المحاضرات 😢"))
+      .finally(() => setLoadingLectures(false));
+  }, []);
+
+  // ✅ التعامل مع رفع الملف
+  const handleFileChange = ({ fileList }: { fileList: UploadFile[] }) => {
+    setFileObj(fileList[0]?.originFileObj || null);
   };
 
+// ✅ عند الضغط على "Upload"
+const handleOk = async () => {
+  const token = localStorage.getItem("accessToken"); // أو من authStore إذا موجود
+  if (!token) {
+    message.error("الرجاء تسجيل الدخول أولاً");
+    return;
+  }
+
+  if (userRole !== "teacher") {
+    message.warning("فقط المعلم يمكنه إضافة الواجبات!");
+    return;
+  }
+
+  try {
+    const values = await form.validateFields();
+
+    if (!fileObj) {
+      message.error("يرجى رفع ملف الواجب!");
+      return;
+    }
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const assignmentData = {
+      title: values.title,
+      description: values.description,
+      due_date: dayjs(values.dueDate).format("YYYY-MM-DD"), // الصيغة الصحيحة
+      lecture: values.lecture, // رقم lecture id
+      file: fileObj,
+      created_by: user.id,
+    };
+
+    const newAssignment = await addAssignment(token, assignmentData);
+
+    message.success("✅ تم إضافة الواجب بنجاح!");
+    setAssignments((prev: any[]) => [newAssignment, ...prev]);
+
+    form.resetFields();
+    handleCancel();
+  } catch (error: any) {
+    console.error("❌ Error adding assignment:", error);
+    message.error("حدث خطأ أثناء إضافة الواجب.");
+  }
+};
   return (
     <Modal
       open={isModalVisible}
@@ -36,10 +112,8 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVi
       onCancel={handleCancel}
       centered
       width={400}
-      height={550}
       style={{ borderRadius: 12, overflow: "hidden" }}
     >
-      {/* Header */}
       <div
         style={{
           backgroundColor: "#B8CDE0",
@@ -54,7 +128,6 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVi
         </Title>
       </div>
 
-      {/* Form */}
       <div style={{ padding: "25px 35px" }}>
         <Form form={form} layout="vertical">
           <Form.Item
@@ -62,7 +135,11 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVi
             name="title"
             rules={[{ required: true, message: "Please enter assignment title" }]}
           >
-            <Input placeholder="Enter assignment title" size="large" style={{ borderRadius: 10 }} />
+            <Input
+              placeholder="Enter assignment title"
+              size="large"
+              style={{ borderRadius: 10 }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -71,9 +148,8 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVi
             rules={[{ required: true, message: "Please enter description" }]}
           >
             <Input.TextArea
-
               placeholder="Write a short description"
-              rows={1}
+              rows={2}
               style={{ borderRadius: 10 }}
             />
           </Form.Item>
@@ -90,21 +166,37 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVi
             />
           </Form.Item>
 
+          <Form.Item
+            label={<b>Select Lecture</b>}
+            name="lecture"
+            rules={[{ required: true, message: "Please select a lecture" }]}
+          >
+            <Select
+              placeholder="Select lecture"
+              loading={loadingLectures}
+              style={{ borderRadius: 10 }}
+            >
+              {lectures.map((lec) => (
+                <Option key={lec.id} value={lec.id}>
+                  {lec.title}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
           <Form.Item label={<b>Attach File</b>} name="file">
             <Upload
               beforeUpload={() => false}
               onChange={handleFileChange}
-              fileList={fileList}
               maxCount={1}
-              accept=".pdf,.doc,.docx,.zip"
+              accept=".pdf,.doc,.docx,.zip,.txt"
             >
               <Button
                 icon={<FileAddOutlined />}
                 style={{
-                  border: "1px solid #ccc",
                   borderRadius: 10,
-                  height: 50,
                   width: "100%",
+                  height: 50,
                   fontWeight: 600,
                 }}
               >
@@ -118,7 +210,7 @@ const UploadAssignmentModal: React.FC<UploadAssignmentModalProps> = ({ isModalVi
             icon={<UploadOutlined />}
             block
             size="large"
-            onClick={handleSubmit}
+            onClick={handleOk}
             style={{
               backgroundColor: "#B8CDE0",
               border: "none",

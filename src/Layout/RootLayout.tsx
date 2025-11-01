@@ -10,8 +10,10 @@ import {
   SettingOutlined,
   PoweroffOutlined,
   YoutubeOutlined,
+  FileDoneOutlined,
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
+import LogoutModal from "../pages/logout";
 
 function RootLayout() {
   const navigate = useNavigate();
@@ -41,11 +43,10 @@ function RootLayout() {
   const renderUserInfo = () => {
     if (!user) return null;
 
-    if (user.role === "student") {
       return (
         <div style={{ textAlign: "center", marginBottom: 20, marginTop: 20 }}>
           <Avatar size={70} style={{ backgroundColor: "#F1F1F1" }}>
-            <img src={user?.profile_image || profile}alt="profile"
+            <img src={user?.profile_image || profile} alt="profile"
             style={{
              width: "74%",
              borderRadius: "50%",
@@ -58,23 +59,6 @@ function RootLayout() {
           <p style={{ fontSize: 12, color: "#888" }}>{user.email}</p>
         </div>
       );
-    } else if (user.role === "teacher") {
-      return (
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: 20,
-            marginTop: 30,
-            color: "#fff",
-          }}
-        >
-          <h2 style={{ fontWeight: "bold", fontSize: "20px" }}>
-            👋 Welcome back,
-          </h2>
-          <h3 style={{ color: "#F5F5F5", marginTop: 8 }}>{user.name}</h3>
-        </div>
-      );
-    }
 
     return null;
   };
@@ -131,6 +115,13 @@ function RootLayout() {
             Assignments
           </Menu.Item>
           <Menu.Item
+            key="submissions"
+            icon={<FileDoneOutlined  />}
+            onClick={() => navigate("/submissions")}
+          >
+            Submissions
+          </Menu.Item>
+          <Menu.Item
             key="settings"
             icon={<SettingOutlined />}
             onClick={() => navigate("/settings")}
@@ -140,7 +131,7 @@ function RootLayout() {
           <Menu.Item
             key="signout"
             icon={<PoweroffOutlined />}
-            onClick={handleLogout}
+            onClick={() => setLogoutVisible(true)}
           >
             Sign out
           </Menu.Item>
@@ -149,6 +140,13 @@ function RootLayout() {
 
       {/* --- Main content --- */}
       <Outlet />
+
+      {/* Logout Modal */}
+      <LogoutModal
+        visible={logoutVisible}
+        onCancel={() => setLogoutVisible(false)}
+        onConfirm={handleLogout}
+      />
     </Layout>
   );
 }

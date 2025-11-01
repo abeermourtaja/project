@@ -1,7 +1,9 @@
-import { Layout, Typography, Input, Button, Form, Space, Row } from "antd";
+import { Layout, Typography, Input, Button, Form, Space, Row, message, Modal, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { COLORS } from "../../constants/colors";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { getUserProfile, updateUserProfile, deleteUserAccount } from "../../API/api";
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -9,14 +11,70 @@ const { Title } = Typography;
 function AccountInformation() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState<any>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  const handleUpdate = (values: any) => {
-    console.log("Updated info:", values);
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      message.error("الرجاء تسجيل الدخول أولاً");
+      navigate("/login");
+      return;
+    }
+    getUserProfile(token)
+      .then((data) => {
+        setUserData(data);
+        form.setFieldsValue({
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+        });
+      })
+      .catch(() => {
+        message.error("فشل في تحميل بيانات المستخدم 😢");
+      })
+      .finally(() => setLoading(false));
+  }, [navigate, form]);
+
+  const handleUpdate = async (values: any) => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+    try {
+      await updateUserProfile(token, values);
+      message.success("✅ تم تحديث البيانات بنجاح!");
+      setUserData({ ...userData, ...values });
+    } catch (error: any) {
+      console.error("❌ Error updating profile:", error);
+      message.error("حدث خطأ أثناء تحديث البيانات.");
+    }
   };
 
-  const handleDelete = () => {
-    console.log("Account deleted");
+  const handleDelete = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+    try {
+      await deleteUserAccount(token);
+      message.success("✅ تم حذف الحساب بنجاح!");
+      localStorage.clear();
+      navigate("/login");
+    } catch (error: any) {
+      console.error("❌ Error deleting account:", error);
+      message.error("حدث خطأ أثناء حذف الحساب.");
+    }
   };
+
+  if (loading) {
+    return (
+      <Layout style={{ backgroundColor: COLORS.background, marginLeft: 220, width: "100%" }}>
+        <Content style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+          <div style={{ textAlign: "center" }}>
+            <Spin size="large" />
+          </div>
+        </Content>
+      </Layout>
+    );
+  }
 
   return (
     <Layout
@@ -63,11 +121,6 @@ function AccountInformation() {
             layout="vertical"
             form={form}
             onFinish={handleUpdate}
-            initialValues={{
-              name: "Ahmed Ali",
-              email: "Ahmed.Ali@gmail.com",
-              phone: "+972592894561",
-            }}
           >
             <Form.Item label="Full Name" name="name">
               <Input
@@ -121,7 +174,7 @@ function AccountInformation() {
 
               <Button
                 block
-                onClick={handleDelete}
+                onClick={() => setDeleteModalVisible(true)}
                 style={{
                   height: 45,
                   borderRadius: 6,
@@ -137,6 +190,19 @@ function AccountInformation() {
           </Form>
         </div>
       </Content>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        title="Confirm Account Deletion"
+        open={deleteModalVisible}
+        onOk={handleDelete}
+        onCancel={() => setDeleteModalVisible(false)}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+      >
+        <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+      </Modal>
     </Layout>
   );
 }
