@@ -48,7 +48,7 @@ function Login() {
       if (user.role === "student") {
         navigate("/home");
       } else if (user.role === "teacher") {
-        navigate("/lectures");
+        navigate("/home");
       } else {
         message.warning("⚠️ Role not recognized, redirecting to home...");
         navigate("/home");

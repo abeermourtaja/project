@@ -106,16 +106,8 @@ export async function addLecture(token: string, lectureData: any) {
 // ✅ إضافة واجب جديد (للمعلم فقط)
 export async function addAssignment(token: string, assignmentData: any) {
   try {
-    const payload = {
-      title: assignmentData.title,
-      description: assignmentData.description,
-      due_date: assignmentData.due_date, // YYYY-MM-DD
-      lecture: assignmentData.lecture.toString(), // رقم
-      created_by: assignmentData.created_by.toString(),
-      file_link: assignmentData.file_link, // 🔹 رابط الملف بدلاً من رفع الملف
-    };
-
-    const response = await axios.post(ENDPOINTS.assignments, payload, {
+    
+    const response = await axios.post(ENDPOINTS.assignments, assignmentData, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",

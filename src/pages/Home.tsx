@@ -10,7 +10,6 @@ import {
   Spin,
   message,
   Statistic,
-  Button,
 } from "antd";
 import {
   FileTextOutlined,
@@ -42,6 +41,8 @@ function Home() {
     totalAssignments: 0,
     totalLectures: 0,
     totalMarks: 0,
+    unsubmittedStudents: 0,
+    remainingAssignments: 0,
   });
   const [paddingTop, setPaddingTop] = useState<number>(30);
 
@@ -77,34 +78,63 @@ function Home() {
   const fetchTeacherStats = async () => {
     try {
       const token = localStorage.getItem("accessToken");
-      const [studentsRes, assignmentsRes, lecturesRes] = await Promise.all([
-        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/users/", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/assignments/", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/lectures/", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [studentsRes, assignmentsRes, lecturesRes, submissionsRes] = await Promise.all([
+        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/users/", { headers }),
+        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/assignments/", { headers }),
+        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/lectures/", { headers }),
+        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/submissions/", { headers }),
       ]);
 
       const students = studentsRes.data?.results?.filter(
         (u: any) => u.role === "student"
       ) || [];
 
+      // حساب عدد الطلاب الذين لم يسلموا أي واجب
+      const unsubmitted = students.filter((student: any) => {
+        const studentSubs = submissionsRes.data.results?.filter(
+          (s: any) => s.student === student.id && s.is_submitted
+        );
+        return !studentSubs?.length;
+      }).length;
+
       setStats({
         totalStudents: students.length,
         totalAssignments: assignmentsRes.data?.count || assignmentsRes.data?.length || 0,
         totalLectures: lecturesRes.data?.count || lecturesRes.data?.length || 0,
-        totalMarks: students.reduce(
-          (acc: number, s: any) => acc + (s.total_marks || 0),
-          0
-        ),
+        unsubmittedStudents: unsubmitted,
       });
     } catch (err) {
       console.error(err);
       message.error("Error loading academic data");
+    }
+  };
+
+  // ✅ جلب بيانات الطالب
+  const fetchStudentStats = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [assignmentsRes, submissionsRes] = await Promise.all([
+        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/assignments/", { headers }),
+        axios.get("https://english-learning-app-backend-1-yrx3.onrender.com/api/v1/submissions/", { headers }),
+      ]);
+
+      const assignments = assignmentsRes.data?.results || assignmentsRes.data;
+      const submissions = submissionsRes.data?.results || submissionsRes.data;
+
+      const remainingAssignments = assignments.length - submissions.filter((s: any) => s.is_submitted).length;
+      const totalMarks = submissions.reduce((sum: number, s: any) => sum + (s.grade || 0), 0);
+
+      setStats({
+        totalMarks,
+        remainingAssignments,
+      });
+    } catch (err) {
+      console.error(err);
+      message.error("Error loading student stats");
     }
   };
 
@@ -114,6 +144,7 @@ function Home() {
 
   useEffect(() => {
     if (user?.role === "teacher") fetchTeacherStats();
+    else if (user?.role === "student") fetchStudentStats();
   }, [user]);
 
   return (
@@ -167,7 +198,17 @@ function Home() {
               justifyContent: "center",
             }}
           >
-            <NotificationsDrawer open={open} onClose={() => { setOpen(false); setPaddingTop(30); }} setOpen={(isOpen) => { setOpen(isOpen); if (isOpen) setPaddingTop(80); }} />
+            <NotificationsDrawer
+              open={open}
+              onClose={() => {
+                setOpen(false);
+                setPaddingTop(30);
+              }}
+              setOpen={(isOpen) => {
+                setOpen(isOpen);
+                if (isOpen) setPaddingTop(80);
+              }}
+            />
           </div>
         </Row>
 
@@ -206,7 +247,7 @@ function Home() {
           </Row>
         </Card>
 
-        {/* ✅ قسم التعميمات (يظهر للكل) */}
+        {/* ✅ قسم التعميمات */}
         <div
           style={{
             marginTop: 10,
@@ -253,7 +294,7 @@ function Home() {
           )}
         </div>
 
-        {/* 🧩 لو المستخدم معلم نعرض لوحة البيانات */}
+        {/* 🧩 بيانات المعلم */}
         {user?.role === "teacher" && (
           <div
             style={{
@@ -264,23 +305,23 @@ function Home() {
               boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
             }}
           >
-            <Title level={4}>Academic data</Title>
+            <Title level={4}>Academic Data</Title>
             <Row gutter={16}>
               <Col span={6}>
                 <Card>
                   <Statistic
-                    title="Student Status"
-                    value="Committed"
-                    valueStyle={{ color: "#1890ff" }}
+                    title="Total Assignments"
+                    value={stats.totalAssignments}
+                    prefix={<FileTextOutlined />}
                   />
                 </Card>
               </Col>
               <Col span={6}>
                 <Card>
                   <Statistic
-                    title="Students Total Marks"
-                    value={stats.totalMarks}
-                    prefix={<FileTextOutlined />}
+                    title="Unsubmitted Students"
+                    value={stats.unsubmittedStudents}
+                    prefix={<EyeOutlined />}
                   />
                 </Card>
               </Col>
@@ -305,9 +346,51 @@ function Home() {
             </Row>
           </div>
         )}
+
+        {/* 🧩 بيانات الطالب */}
+        {user?.role === "student" && (
+          <div
+            style={{
+              marginTop: 20,
+              backgroundColor: "#fff",
+              borderRadius: 12,
+              padding: "25px",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+            }}
+          >
+            <Title level={4}>Academic Data</Title>
+            <Row gutter={16}>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Student Status"
+                    value="Committed"
+                    valueStyle={{ color: "#1890ff" }}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Total Marks"
+                    value={stats.totalMarks}
+                    prefix={<FileTextOutlined />}
+                  />
+                </Card>
+              </Col>
+              <Col span={6}>
+                <Card>
+                  <Statistic
+                    title="Remaining Assignments"
+                    value={stats.remainingAssignments}
+                    prefix={<CalendarOutlined />}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </div>
+        )}
       </Content>
     </Layout>
   );
 }
-
-export default Home;
