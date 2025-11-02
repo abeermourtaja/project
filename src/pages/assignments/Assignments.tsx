@@ -339,8 +339,7 @@ function Assignments() {
                   <Space direction="vertical">
                     
 
-                    {!item.has_submitted && userRole === "student"
-                     ? (
+                    {!item.has_submitted && userRole==="student" ? (
                     <Button
                       icon={<PlusOutlined />}
                       style={{

@@ -172,7 +172,7 @@ const [paddingTop, setPaddingTop] = useState(450); // default padding top
                         Assignment Title: {sub.assignment_title}
                       </Title>
                       <Text style={{ fontSize: 13, display: 'block', marginTop: 8 }}>
-                        <b>Grade:</b> {sub.grade ?? "Not graded"} %
+                        <b>Grade:</b> {sub.grade ?? "Not graded"} 
                       </Text>
                     </Col>
                     <Col style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
@@ -193,7 +193,7 @@ const [paddingTop, setPaddingTop] = useState(450); // default padding top
                         style={{ backgroundColor: "#81B1E7", border: "none", borderRadius: 8, color: "#000", fontWeight: 600 }}
                         onClick={() => openEditGradeModal(sub)}
                       >
-                        Add Grade
+                        {sub.grade !== null ? "Edit Grade" : "Add Grade"}
                       </Button>
                     </Col>
                   </Row>
