@@ -81,7 +81,7 @@ const handleOk = async () => {
       description: values.description,
       due_date: dayjs(values.dueDate).format("YYYY-MM-DD"), // الصيغة الصحيحة
       lecture: values.lecture, // رقم lecture id
-      file_url: values.link,
+      file_url: values.fileLink,
       created_by: user.id,
     };
 

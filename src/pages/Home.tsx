@@ -44,6 +44,7 @@ function Home() {
     unsubmittedStudents: 0,
     remainingAssignments: 0,
   });
+  const [paddingTop, setPaddingTop] = useState<number>(30);
 
   // ✅ تحميل بيانات المستخدم
   useEffect(() => {
@@ -151,9 +152,8 @@ function Home() {
       style={{
         backgroundColor: COLORS.background,
         marginLeft: 220,
-        padding: `30px 30px 30px 30px`,
+        padding: `${paddingTop}px 30px 30px 30px`,
         width: "100%",
-        paddingTop: "70px",
         transition: 'padding-top 0.3s ease',
       }}
     >
@@ -202,9 +202,11 @@ function Home() {
               open={open}
               onClose={() => {
                 setOpen(false);
+                setPaddingTop(30);
               }}
               setOpen={(isOpen) => {
                 setOpen(isOpen);
+                if (isOpen) setPaddingTop(80);
               }}
             />
           </div>
@@ -392,3 +394,5 @@ function Home() {
     </Layout>
   );
 }
+
+export default Home;

@@ -107,7 +107,7 @@ export async function addLecture(token: string, lectureData: any) {
 export async function addAssignment(token: string, assignmentData: any) {
   try {
     
-    const response = await axios.post(ENDPOINTS.assignments, assignmentData, {
+    const response = await axios.post(ENDPOINTS.assignments, assignmentData                     , {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",

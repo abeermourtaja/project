@@ -165,18 +165,7 @@ function Login() {
                 >
                   Log in
                 </Button>
-                <div style={{ textAlign: "right", marginBottom: "1rem" }}>
-                  <a
-                    href="/forget-password"
-                    style={{
-                      fontSize: "13px",
-                      textDecoration: "underline",
-                      color: "#2E2E2E",
-                    }}
-                  >
-                    Forget password?
-                  </a>
-                </div>
+                
               </Form.Item>
             </Form>
             <div style={{alignContent:"center", marginTop: "1rem"}}>

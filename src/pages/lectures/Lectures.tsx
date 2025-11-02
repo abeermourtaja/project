@@ -18,7 +18,6 @@ import {
   DatePicker,
   Dropdown,
   Menu,
-  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -55,12 +54,11 @@ function Lectures() {
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [viewFileUrl, setViewFileUrl] = useState<string>("");
   const [paddingTop, setPaddingTop] = useState(200); // default padding top
-  const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      setAlert({ type: 'error', message: "Please log in first" });
+      message.error("Please log in first");
       navigate("/login");
       return;
     }
@@ -76,17 +74,10 @@ function Lectures() {
         setFilteredLectures(lectureList);
       })
       .catch(() => {
-        setAlert({ type: 'error', message: "Failed to load lectures 😢" });
+        message.error("Failed to load lectures 😢");
       })
       .finally(() => setLoading(false));
   }, [navigate]);
-
-  useEffect(() => {
-    if (alert) {
-      const timer = setTimeout(() => setAlert(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [alert]);
 
   const getPreviewUrl = (url?: string) => {
     if (!url) return "";
@@ -129,7 +120,7 @@ function Lectures() {
     const token = localStorage.getItem("accessToken");
     if (!token) return;
     if (userRole !== "teacher") {
-      setAlert({ type: 'warning', message: "Only teachers can add lectures!" });
+      message.warning("Only teachers can add lectures!");
       return;
     }
     try {
@@ -145,7 +136,7 @@ function Lectures() {
         teacher_name: user.name || "Unknown Teacher",
       };
       const newLecture = await addLecture(token, lectureData);
-      setAlert({ type: 'success', message: "Lecture added successfully!" });
+      message.success("Lecture added successfully!");
       const updated = [newLecture, ...lectures];
       setLectures(updated);
       setFilteredLectures(updated);
@@ -158,7 +149,7 @@ window.scrollTo({ top: 0, behavior: "smooth" });
       setFileLink("");
     } catch (error: any) {
       console.error("❌ Error adding lecture:", error);
-      setAlert({ type: 'error', message: "An error occurred while uploading the lecture." });
+      message.error("An error occurred while uploading the lecture.");
     }
   };
 
@@ -186,7 +177,7 @@ window.scrollTo({ top: 0, behavior: "smooth" });
         file_link: values.fileLink,
       };
       const updated = await updateLecture(token, editLecture.id, data);
-      setAlert({ type: 'success', message: "Lecture updated successfully!" });
+      message.success("Lecture updated successfully!");
       setLectures((prev) => prev.map((l) => (l.id === editLecture.id ? updated : l)));
       setFilteredLectures((prev) => prev.map((l) => (l.id === editLecture.id ? updated : l)));
       setIsEditModalVisible(false);
@@ -194,7 +185,7 @@ window.scrollTo({ top: 0, behavior: "smooth" });
       form.resetFields();
     } catch (error: any) {
       console.error("❌ Error editing lecture:", error);
-      setAlert({ type: 'error', message: "An error occurred while updating the lecture." });
+      message.error("An error occurred while updating the lecture.");
     }
   };
 
@@ -203,15 +194,15 @@ window.scrollTo({ top: 0, behavior: "smooth" });
     if (!token) return;
     try {
       await deleteLecture(token, lectureId);
-      setAlert({ type: 'success', message: "Lecture deleted successfully!" });
+      message.success("Lecture deleted successfully!");
       setLectures((prev) => prev.filter((l) => l.id !== lectureId));
       setFilteredLectures((prev) => prev.filter((l) => l.id !== lectureId));
       setPaddingTop((prev) => Math.max(450, prev - 70));
       window.scrollTo({ top: 0, behavior: "smooth" });
-      
+
     } catch (error: any) {
       console.error("❌ Error deleting lecture:", error);
-      setAlert({ type: 'error', message: "An error occurred while deleting the lecture." });
+      message.error("An error occurred while deleting the lecture.");
     }
   };
 
@@ -294,17 +285,6 @@ window.scrollTo({ top: 0, behavior: "smooth" });
 
       {/* Lectures Content */}
 <Content style={{ width: "100%", padding: "140px 50px 50px 50px" , paddingTop: `${paddingTop}px`, transition: 'padding-top 0.3s ease', ...(filteredLectures.length === 0 ? { display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 220px)' } : { display: 'flex', justifyContent: 'center' }) }}>
-        {/* Alert for errors */}
-        {alert && (
-          <Alert
-            message={alert.message}
-            type={alert.type}
-            showIcon
-            closable
-            onClose={() => setAlert(null)}
-            style={{ marginBottom: "20px" }}
-          />
-        )}
         {filteredLectures.length === 0 ? (
           <Empty
             description={
@@ -347,8 +327,8 @@ window.scrollTo({ top: 0, behavior: "smooth" });
                           Watch Video
                         </Button>
                       )}
-                      {lecture.pdf ? (
-                        <Button type="link" href={lecture.pdf} target="_blank" style={{ color: "#000", fontWeight: 600 }}>
+                      {true ? (
+                        <Button type="link" href="https://drive.google.com/file/d/1kjiOCMKZb8gIh7J6amBqaY_5dB9HYUcB/view?usp=drive_link" target="_blank" style={{ color: "#000", fontWeight: 600 }}>
                           View File
                         </Button>
                       ) : (

@@ -318,28 +318,23 @@ function Assignments() {
                     <b>Due Date:</b> {dayjs(item.due_date).format("DD MMM YYYY")}
                   </Text>
                   <br />
-                  {item.file_url ? (
                       <Button
                         type="text"
                         icon={<EyeOutlined />}
-                        href={item.file_url}
+                        href="https://drive.google.com/file/d/1kjiOCMKZb8gIh7J6amBqaY_5dB9HYUcB/view?usp=drive_link"
                         target="_blank"
                         style={{ padding:"0", fontWeight: 600 ,color: "#9AB7D0" }}
                       >
                         View Assignment File
                       </Button>
-                    ) : (
-                      <Text style={{ padding:"0",fontSize: 13, color: "#9AB7D0" }}>
-                        File isn't attached
-                      </Text>
-                    )}
+                   
                 </Col>
 
                 <Col>
                   <Space direction="vertical">
                     
 
-                    {!item.has_submitted && userRole==="student" ? (
+                    {!item.has_submitted && userRole=="student" ? (
                     <Button
                       icon={<PlusOutlined />}
                       style={{
@@ -361,12 +356,9 @@ function Assignments() {
                   ) : (
                     <Button
                       type="text"
-                      icon={<EyeOutlined />}
-                      href={item.file_url}
                       target="_blank"
                       style={{ padding: "0", fontWeight: 600, color: "#9AB7D0" }}
                     >
-                      View Submission File
                     </Button>
                   )}  
                     {userRole === "teacher" && (
@@ -405,7 +397,6 @@ function Assignments() {
                     {userRole === "student" && (
                       <Space>
                         <Text style={{ fontSize: 13, color: "#9AB7D0" }}>
-                          <b>Your Grade:</b> {userGrades[item.id] ?? "Not graded"}
                         </Text>
                       </Space>
                     )}
